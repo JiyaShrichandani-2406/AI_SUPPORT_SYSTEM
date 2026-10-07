@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from email_sender import send_email_to_customer
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Literal
@@ -375,6 +376,153 @@ Customer Message:
 
     db.add(new_triage)
 
+# ==========================================================
+# APPROVE AND SEND RESPONSE TO CUSTOMER
+# ==========================================================
+
+@app.post("/tickets/{ticket_id}/approve")
+def approve_ticket(
+    ticket_id: str,
+    db: Session = Depends(get_db)
+):
+
+    print("\n==========================================")
+    print("APPROVING TICKET")
+    print("==========================================")
+    print("Ticket ID:", ticket_id)
+
+    # ------------------------------------------------------
+    # Find ticket
+    # ------------------------------------------------------
+
+    ticket = db.query(
+        SupportTicket
+    ).filter(
+        SupportTicket.ticket_id == ticket_id
+    ).first()
+
+    if not ticket:
+        return {
+            "status": "error",
+            "message": "Ticket not found"
+        }
+
+    # ------------------------------------------------------
+    # Find AI response
+    # ------------------------------------------------------
+
+    ai_result = db.query(
+        AITriageResult
+    ).filter(
+        AITriageResult.ticket_id == ticket_id
+    ).first()
+
+    if not ai_result:
+        return {
+            "status": "error",
+            "message": "AI response not found"
+        }
+
+    if not ai_result.ai_response:
+        return {
+            "status": "error",
+            "message": "No customer response is available to send"
+        }
+
+    # ------------------------------------------------------
+    # Extract customer email
+    #
+    # Example:
+    # Jiya Shrichandani <jiyashrichandani6@gmail.com>
+    # ------------------------------------------------------
+
+    sender = ticket.sender or ""
+
+    if "<" in sender and ">" in sender:
+        customer_email = sender.split("<")[1].split(">")[0].strip()
+    else:
+        customer_email = sender.strip()
+
+    if not customer_email or "@" not in customer_email:
+        return {
+            "status": "error",
+            "message": "Could not determine customer email address"
+        }
+
+    print("Customer Email:", customer_email)
+
+    # ------------------------------------------------------
+    # Build subject
+    # ------------------------------------------------------
+
+    subject = ticket.subject or "Support Response"
+
+    if not subject.lower().startswith("re:"):
+        subject = "Re: " + subject
+
+    # ------------------------------------------------------
+    # SEND EMAIL
+    # ------------------------------------------------------
+
+    try:
+
+        sent_message = send_email_to_customer(
+            to_address=customer_email,
+            subject=subject,
+            body=ai_result.ai_response
+        )
+
+    except Exception as error:
+
+        print("\nEMAIL SEND ERROR:")
+        print(error)
+
+        return {
+            "status": "error",
+            "message": "Failed to send email to customer",
+            "error": str(error)
+        }
+
+    # ------------------------------------------------------
+    # Update ticket status
+    # ------------------------------------------------------
+
+    try:
+
+        ticket.status = "RESOLVED"
+
+        db.commit()
+        db.refresh(ticket)
+
+    except Exception as error:
+
+        db.rollback()
+
+        return {
+            "status": "error",
+            "message": "Email was sent, but ticket status could not be updated",
+            "error": str(error)
+        }
+
+    # ------------------------------------------------------
+    # SUCCESS
+    # ------------------------------------------------------
+
+    print("\n==========================================")
+    print("CUSTOMER EMAIL SENT SUCCESSFULLY")
+    print("==========================================")
+    print("To:", customer_email)
+    print("Ticket ID:", ticket_id)
+    print("Gmail Message ID:", sent_message.get("id"))
+
+    return {
+        "status": "success",
+        "message": "Response sent successfully to customer.",
+        "ticket_id": ticket_id,
+        "customer_email": customer_email,
+        "gmail_message_id": sent_message.get("id"),
+        "ticket_status": ticket.status
+    }
 
     # ======================================================
     # STEP 8 — SAVE EVERYTHING TO DATABASE

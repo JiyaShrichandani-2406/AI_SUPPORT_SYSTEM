@@ -1,980 +1,91 @@
-// =========================================================
-// FASTAPI CONFIGURATION
-// =========================================================
 
-const API_URL = "http://127.0.0.1:8000";
+"use strict";
+
+/* =========================================================
+   AI TECHNICAL SUPPORT SYSTEM
+   Frontend <-> FastAPI <-> SQLite / AI / RAG / Gmail
+========================================================= */
 
 
-// =========================================================
-// GLOBAL STATE
-// =========================================================
+/* =========================================================
+   1. API CONFIGURATION
+========================================================= */
 
-let selectedTicketId = null;
+// When served by FastAPI at /app/, use the same origin.
+// When served through VS Code Live Server, connect to port 8000.
+
+const API_URL =
+    window.location.port === "8000"
+        ? window.location.origin
+        : "http://127.0.0.1:8000";
+
+const DESKTOP_QUERY = window.matchMedia("(min-width: 960px)");
+
+const REQUEST_TIMEOUT = 240000;
+
+
+/* =========================================================
+   2. APPLICATION STATE
+========================================================= */
+
 let tickets = [];
+let selectedTicketId = null;
+let currentFilter = "ALL";
+let currentReviewStatus = null;
+let loadedResponseText = "";
+let isLoadingTickets = false;
+let toastTimer = null;
 
 
-// =========================================================
-// HTML ELEMENTS
-// =========================================================
+/* =========================================================
+   3. HTML ELEMENT REFERENCES
+========================================================= */
 
-const ticketTableBody =
-    document.getElementById("ticketTableBody");
+const $ = (id) => document.getElementById(id);
 
-const ticketDetailsSection =
-    document.getElementById("ticketDetailsSection");
+const el = {
+    ticketList: $("ticketList"),
+    listCount: $("listCount"),
+    searchInput: $("searchInput"),
+    connectionMessage: $("connectionMessage"),
 
-const noSelectionSection =
-    document.getElementById("noSelectionSection");
+    refreshButton: $("refreshButton"),
+    refreshIcon: document.querySelector(".refresh-icon"),
 
-const refreshButton =
-    document.getElementById("refreshButton");
+    backButton: $("backButton"),
 
-const updateStatusButton =
-    document.getElementById("updateStatusButton");
+    noSelection: $("noSelection"),
+    ticketDetails: $("ticketDetails"),
 
-const statusSelect =
-    document.getElementById("statusSelect");
+    detailStatusBadge: $("detailStatusBadge"),
+    detailSubject: $("detailSubject"),
 
-const connectionMessage =
-    document.getElementById("connectionMessage");
+    reviewText: $("reviewResponseText"),
+    reviewBadge: $("reviewStatusBadge"),
+    reviewMessage: $("reviewMessage"),
 
-const reviewResponseText =
-    document.getElementById("reviewResponseText");
+    approveButton: $("approveButton"),
+    saveEditButton: $("saveEditButton"),
+    sendButton: $("sendButton"),
 
-const reviewStatusBadge =
-    document.getElementById("reviewStatusBadge");
+    statusSelect: $("statusSelect"),
+    updateStatusButton: $("updateStatusButton"),
+    statusMessage: $("statusMessage"),
 
-const reviewMessage =
-    document.getElementById("reviewMessage");
+    aiTriageId: $("aiTriageId"),
+    sentInformation: $("sentInformation"),
+    sentAt: $("sentAt"),
 
-const approveButton =
-    document.getElementById("approveButton");
+    toast: $("toast")
+};
 
-const saveEditButton =
-    document.getElementById("saveEditButton");
 
-const sendButton =
-    document.getElementById("sendButton");
-
-
-// =========================================================
-// LOAD ALL TICKETS
-// =========================================================
-
-async function loadTickets() {
-
-    showConnectionMessage("");
-
-    try {
-
-        const response = await fetch(
-            `${API_URL}/tickets`
-        );
-
-        if (!response.ok) {
-            throw new Error(
-                `FastAPI returned ${response.status}`
-            );
-        }
-
-        tickets = await response.json();
-
-        displayTickets(tickets);
-
-        updateStatistics(tickets);
-
-    } catch (error) {
-
-        console.error(
-            "Error loading tickets:",
-            error
-        );
-
-        ticketTableBody.innerHTML = `
-            <tr>
-                <td colspan="4" class="empty-row">
-                    Unable to connect to FastAPI.
-                </td>
-            </tr>
-        `;
-
-        updateStatistics([]);
-
-        showConnectionMessage(
-            "Unable to connect to FastAPI. Make sure Uvicorn is running on http://127.0.0.1:8000."
-        );
-    }
-}
-
-
-// =========================================================
-// DISPLAY ALL TICKETS
-// =========================================================
-
-function displayTickets(ticketList) {
-
-    ticketTableBody.innerHTML = "";
-
-    if (
-        !ticketList ||
-        ticketList.length === 0
-    ) {
-
-        ticketTableBody.innerHTML = `
-            <tr>
-                <td colspan="4" class="empty-row">
-                    No tickets available.
-                </td>
-            </tr>
-        `;
-
-        return;
-    }
-
-
-    ticketList.forEach(ticket => {
-
-        const row =
-            document.createElement("tr");
-
-        row.classList.add("ticket-row");
-
-
-        if (
-            ticket.ticket_id ===
-            selectedTicketId
-        ) {
-            row.classList.add("selected");
-        }
-
-
-        row.innerHTML = `
-
-            <td>
-                <span class="ticket-id">
-                    ${escapeHtml(
-                        ticket.ticket_id || "-"
-                    )}
-                </span>
-            </td>
-
-            <td>
-                ${escapeHtml(
-                    ticket.subject || "No subject"
-                )}
-            </td>
-
-            <td>
-                ${escapeHtml(
-                    extractEmail(ticket.sender) || "-"
-                )}
-            </td>
-
-            <td>
-                ${createStatusBadge(
-                    ticket.status || "-"
-                )}
-            </td>
-        `;
-
-
-        row.addEventListener(
-            "click",
-            () => {
-
-                loadTicketDetails(
-                    ticket.ticket_id
-                );
-
-            }
-        );
-
-
-        ticketTableBody.appendChild(row);
-
-    });
-}
-
-
-// =========================================================
-// UPDATE DASHBOARD STATISTICS
-// =========================================================
-
-function updateStatistics(ticketList) {
-
-    const total =
-        ticketList.length;
-
-
-    const received =
-        ticketList.filter(
-            ticket =>
-                ticket.status === "RECEIVED"
-        ).length;
-
-
-    const triaged =
-        ticketList.filter(
-            ticket =>
-                ticket.status === "TRIAGED"
-        ).length;
-
-
-    const inProgress =
-        ticketList.filter(
-            ticket =>
-                ticket.status === "IN_PROGRESS"
-        ).length;
-
-
-    const resolved =
-        ticketList.filter(
-            ticket =>
-                ticket.status === "RESOLVED"
-        ).length;
-
-
-    document.getElementById(
-        "totalTickets"
-    ).textContent = total;
-
-
-    document.getElementById(
-        "receivedTickets"
-    ).textContent = received;
-
-
-    document.getElementById(
-        "triagedTickets"
-    ).textContent = triaged;
-
-
-    document.getElementById(
-        "inProgressTickets"
-    ).textContent = inProgress;
-
-
-    document.getElementById(
-        "resolvedTickets"
-    ).textContent = resolved;
-}
-
-
-// =========================================================
-// LOAD ONE TICKET
-// =========================================================
-
-async function loadTicketDetails(ticketId) {
-
-    try {
-
-        const response = await fetch(
-            `${API_URL}/tickets/${encodeURIComponent(ticketId)}`
-        );
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                `FastAPI returned ${response.status}`
-            );
-        }
-
-
-        const data =
-            await response.json();
-
-
-        if (!data.ticket) {
-
-            throw new Error(
-                "Ticket information was not returned."
-            );
-        }
-
-
-        selectedTicketId =
-            data.ticket.ticket_id;
-
-
-        displayTicketDetails(data);
-
-        displayTickets(tickets);
-
-
-    } catch (error) {
-
-        console.error(
-            "Error loading ticket details:",
-            error
-        );
-
-        alert(
-            "Unable to load the selected ticket."
-        );
-    }
-}
-
-
-// =========================================================
-// DISPLAY TICKET DETAILS
-// =========================================================
-
-function displayTicketDetails(data) {
-
-    const ticket =
-        data.ticket;
-
-    const ai =
-        data.ai_analysis;
-
-
-    // Show ticket details
-    ticketDetailsSection.classList.remove(
-        "hidden"
-    );
-
-    noSelectionSection.classList.add(
-        "hidden"
-    );
-
-
-    // ------------------------------------------------------
-    // BASIC TICKET INFORMATION
-    // ------------------------------------------------------
-
-    document.getElementById(
-        "detailTicketId"
-    ).textContent =
-        ticket.ticket_id || "-";
-
-
-    document.getElementById(
-        "detailSender"
-    ).textContent =
-        ticket.sender || "-";
-
-
-    document.getElementById(
-        "detailSubject"
-    ).textContent =
-        ticket.subject || "No subject";
-
-
-    document.getElementById(
-        "detailReceivedAt"
-    ).textContent =
-        ticket.received_at || "-";
-
-
-    document.getElementById(
-        "detailGmailId"
-    ).textContent =
-        ticket.gmail_message_id || "-";
-
-
-    document.getElementById(
-        "detailMessage"
-    ).textContent =
-        ticket.message || "-";
-
-
-    // ------------------------------------------------------
-    // STATUS
-    // ------------------------------------------------------
-
-    document.getElementById(
-        "detailStatusBadge"
-    ).textContent =
-        ticket.status || "-";
-
-
-    setStatusBadgeClass(
-        document.getElementById(
-            "detailStatusBadge"
-        ),
-        ticket.status
-    );
-
-
-    statusSelect.value =
-        ticket.status || "RECEIVED";
-
-
-    // ------------------------------------------------------
-    // AI TRIAGE
-    // ------------------------------------------------------
-
-    if (!ai) {
-
-        document.getElementById(
-            "aiSummary"
-        ).textContent =
-            "No AI analysis available.";
-
-        document.getElementById(
-            "aiCategory"
-        ).textContent = "-";
-
-        document.getElementById(
-            "aiIntent"
-        ).textContent = "-";
-
-        document.getElementById(
-            "aiUrgency"
-        ).textContent = "-";
-
-        document.getElementById(
-            "aiSentiment"
-        ).textContent = "-";
-
-        document.getElementById(
-            "aiKeyDetails"
-        ).innerHTML =
-            "<li>No AI analysis available.</li>";
-
-        reviewResponseText.value = "";
-        reviewStatusBadge.textContent = "-";
-        reviewMessage.textContent = "";
-
-        return;
-    }
-
-
-    document.getElementById(
-        "aiSummary"
-    ).textContent =
-        ai.summary || "-";
-
-
-    document.getElementById(
-        "aiCategory"
-    ).textContent =
-        ai.category || "-";
-
-
-    document.getElementById(
-        "aiIntent"
-    ).textContent =
-        ai.intent || "-";
-
-
-    document.getElementById(
-        "aiUrgency"
-    ).textContent =
-        ai.urgency || "-";
-
-
-    document.getElementById(
-        "aiSentiment"
-    ).textContent =
-        ai.sentiment || "-";
-
-
-    // ------------------------------------------------------
-    // KEY DETAILS
-    // ------------------------------------------------------
-
-    const keyDetailsElement =
-        document.getElementById(
-            "aiKeyDetails"
-        );
-
-
-    keyDetailsElement.innerHTML = "";
-
-
-    if (
-        Array.isArray(ai.key_details) &&
-        ai.key_details.length > 0
-    ) {
-
-        ai.key_details.forEach(
-            detail => {
-
-                const li =
-                    document.createElement("li");
-
-                li.textContent =
-                    detail;
-
-                keyDetailsElement.appendChild(
-                    li
-                );
-            }
-        );
-
-    } else {
-
-        keyDetailsElement.innerHTML =
-            "<li>No key details available.</li>";
-    }
-
-
-    // ------------------------------------------------------
-    // HUMAN REVIEW — CLIENT RESPONSE
-    // ------------------------------------------------------
-
-    reviewResponseText.value =
-        ai.final_response || ai.ai_response || "";
-
-    reviewStatusBadge.textContent =
-        ai.review_status || "-";
-
-    setReviewStatusBadgeClass(
-        reviewStatusBadge,
-        ai.review_status
-    );
-
-    reviewMessage.textContent = "";
-}
-
-
-// =========================================================
-// UPDATE TICKET STATUS
-// =========================================================
-
-async function updateTicketStatus() {
-
-    if (!selectedTicketId) {
-
-        alert(
-            "Please select a ticket first."
-        );
-
-        return;
-    }
-
-
-    const newStatus =
-        statusSelect.value;
-
-
-    try {
-
-        const response = await fetch(
-
-            `${API_URL}/tickets/${encodeURIComponent(selectedTicketId)}`,
-
-            {
-                method: "PUT",
-
-                headers: {
-                    "Content-Type":
-                        "application/json"
-                },
-
-                body: JSON.stringify({
-                    status: newStatus
-                })
-            }
-        );
-
-
-        const result =
-            await response.json();
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                result.message ||
-                "Status update failed."
-            );
-        }
-
-
-        document.getElementById(
-            "statusMessage"
-        ).textContent =
-            "Ticket status updated successfully.";
-
-
-        // Reload tickets
-        await loadTickets();
-
-
-        // Reload selected ticket
-        await loadTicketDetails(
-            selectedTicketId
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "Status update error:",
-            error
-        );
-
-        document.getElementById(
-            "statusMessage"
-        ).textContent =
-            "Unable to update ticket status.";
-    }
-}
-
-
-// =========================================================
-// APPROVE AI RESPONSE
-// =========================================================
-
-async function approveResponse() {
-
-    if (!selectedTicketId) {
-
-        alert(
-            "Please select a ticket first."
-        );
-
-        return;
-    }
-
-
-    try {
-
-        const response = await fetch(
-
-            `${API_URL}/tickets/${encodeURIComponent(selectedTicketId)}/approve`,
-
-            { method: "POST" }
-        );
-
-
-        const result =
-            await response.json();
-
-
-        if (!response.ok || result.status === "error") {
-
-            throw new Error(
-                result.message ||
-                "Approve failed."
-            );
-        }
-
-
-        reviewMessage.textContent =
-            result.message;
-
-
-        await loadTicketDetails(
-            selectedTicketId
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "Approve error:",
-            error
-        );
-
-        reviewMessage.textContent =
-            "Unable to approve response.";
-    }
-}
-
-
-// =========================================================
-// SAVE EDITED RESPONSE
-// =========================================================
-
-async function saveEditedResponse() {
-
-    if (!selectedTicketId) {
-
-        alert(
-            "Please select a ticket first."
-        );
-
-        return;
-    }
-
-
-    const editedText =
-        reviewResponseText.value.trim();
-
-
-    if (!editedText) {
-
-        alert(
-            "Response text cannot be empty."
-        );
-
-        return;
-    }
-
-
-    try {
-
-        const response = await fetch(
-
-            `${API_URL}/tickets/${encodeURIComponent(selectedTicketId)}/edit`,
-
-            {
-                method: "PUT",
-
-                headers: {
-                    "Content-Type":
-                        "application/json"
-                },
-
-                body: JSON.stringify({
-                    final_response: editedText
-                })
-            }
-        );
-
-
-        const result =
-            await response.json();
-
-
-        if (!response.ok || result.status === "error") {
-
-            throw new Error(
-                result.message ||
-                "Save edit failed."
-            );
-        }
-
-
-        reviewMessage.textContent =
-            result.message;
-
-
-        await loadTicketDetails(
-            selectedTicketId
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "Save edit error:",
-            error
-        );
-
-        reviewMessage.textContent =
-            "Unable to save edited response.";
-    }
-}
-
-
-// =========================================================
-// SEND TO CUSTOMER
-// =========================================================
-
-async function sendToCustomer() {
-
-    if (!selectedTicketId) {
-
-        alert(
-            "Please select a ticket first."
-        );
-
-        return;
-    }
-
-
-    if (!confirm(
-        "Send this response to the customer now?"
-    )) {
-
-        return;
-    }
-
-
-    try {
-
-        const response = await fetch(
-
-            `${API_URL}/tickets/${encodeURIComponent(selectedTicketId)}/send`,
-
-            { method: "POST" }
-        );
-
-
-        const result =
-            await response.json();
-
-
-        if (!response.ok || result.status === "error") {
-
-            throw new Error(
-                result.message ||
-                "Send failed."
-            );
-        }
-
-
-        reviewMessage.textContent =
-            result.message;
-
-
-        await loadTickets();
-
-        await loadTicketDetails(
-            selectedTicketId
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "Send error:",
-            error
-        );
-
-        reviewMessage.textContent =
-            error.message ||
-            "Unable to send response.";
-    }
-}
-
-
-// =========================================================
-// STATUS BADGE
-// =========================================================
-
-function createStatusBadge(status) {
-
-    const safeStatus =
-        status || "-";
-
-    const statusClass =
-        getStatusClass(safeStatus);
-
-    return `
-        <span class="status-badge ${statusClass}">
-            ${escapeHtml(safeStatus)}
-        </span>
-    `;
-}
-
-
-function setStatusBadgeClass(
-    element,
-    status
-) {
-
-    element.className =
-        "status-badge";
-
-    const statusClass =
-        getStatusClass(status);
-
-    if (statusClass) {
-
-        element.classList.add(
-            statusClass
-        );
-    }
-}
-
-
-function getStatusClass(status) {
-
-    switch (status) {
-
-        case "RECEIVED":
-            return "status-received";
-
-        case "TRIAGED":
-            return "status-triaged";
-
-        case "IN_PROGRESS":
-            return "status-in-progress";
-
-        case "RESOLVED":
-            return "status-resolved";
-
-        default:
-            return "";
-    }
-}
-
-
-// =========================================================
-// REVIEW STATUS BADGE
-// =========================================================
-
-function getReviewStatusClass(status) {
-
-    switch (status) {
-
-        case "PENDING_REVIEW":
-            return "status-pending-review";
-
-        case "APPROVED":
-            return "status-approved";
-
-        case "EDITED":
-            return "status-edited";
-
-        case "SENT":
-            return "status-sent";
-
-        default:
-            return "";
-    }
-}
-
-
-function setReviewStatusBadgeClass(
-    element,
-    status
-) {
-
-    element.className =
-        "status-badge";
-
-    const statusClass =
-        getReviewStatusClass(status);
-
-    if (statusClass) {
-
-        element.classList.add(
-            statusClass
-        );
-    }
-}
-
-
-// =========================================================
-// EXTRACT EMAIL ADDRESS
-// =========================================================
-
-function extractEmail(sender) {
-
-    if (!sender) {
-        return "";
-    }
-
-
-    const match =
-        sender.match(
-            /<([^>]+)>/
-        );
-
-
-    if (match) {
-        return match[1];
-    }
-
-
-    return sender;
-}
-
-
-// =========================================================
-// HTML ESCAPING
-// =========================================================
+/* =========================================================
+   4. GENERAL HELPERS
+========================================================= */
 
 function escapeHtml(value) {
-
-    return String(value)
+    return String(value ?? "")
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
@@ -983,75 +94,1056 @@ function escapeHtml(value) {
 }
 
 
-// =========================================================
-// CONNECTION MESSAGE
-// =========================================================
+function extractEmail(sender) {
+    if (!sender) return "";
 
-function showConnectionMessage(
-    message
-) {
+    const match = String(sender).match(/<([^>]+)>/);
 
-    if (!message) {
+    return match ? match[1] : String(sender);
+}
 
-        connectionMessage.textContent = "";
 
-        connectionMessage.classList.add(
-            "hidden"
-        );
+function prettyLabel(value) {
+    return String(value || "-").replaceAll("_", " ");
+}
 
-        return;
+
+function statusClass(status) {
+    return {
+        RECEIVED: "status-received",
+        TRIAGED: "status-triaged",
+        IN_PROGRESS: "status-in-progress",
+        RESOLVED: "status-resolved"
+    }[status] || "";
+}
+
+
+function reviewClass(status) {
+    return {
+        PENDING_REVIEW: "status-pending-review",
+        APPROVED: "status-approved",
+        EDITED: "status-edited",
+        SENT: "status-sent"
+    }[status] || "";
+}
+
+
+function urgencyClass(urgency) {
+    const value = String(urgency || "").toLowerCase();
+
+    if (value === "high") return "urgency-high";
+    if (value === "medium") return "urgency-medium";
+    if (value === "low") return "urgency-low";
+
+    return "";
+}
+
+
+function setBadge(element, text, className = "") {
+    if (!element) return;
+
+    element.className = "badge" + (className ? ` ${className}` : "");
+    element.textContent = text || "-";
+}
+
+
+function setInlineMessage(element, message, isError = false) {
+    if (!element) return;
+
+    element.textContent = message || "";
+    element.classList.toggle("error", isError);
+}
+
+
+function showToast(message, isError = false) {
+    if (!el.toast) return;
+
+    el.toast.textContent = message;
+
+    el.toast.className = "toast";
+
+    if (isError) {
+        el.toast.classList.add("error");
     }
 
+    clearTimeout(toastTimer);
 
-    connectionMessage.textContent =
-        message;
+    toastTimer = setTimeout(() => {
+        el.toast.classList.add("hidden");
+    }, 3500);
+}
 
-    connectionMessage.classList.remove(
-        "hidden"
+
+function showConnectionMessage(message) {
+    if (!el.connectionMessage) return;
+
+    el.connectionMessage.textContent = message || "";
+
+    el.connectionMessage.classList.toggle(
+        "hidden",
+        !message
     );
 }
 
 
-// =========================================================
-// EVENT LISTENERS
-// =========================================================
+function formatDate(value) {
+    if (!value) return "-";
 
-refreshButton.addEventListener(
-    "click",
-    async () => {
+    const date = new Date(value);
 
-        await loadTickets();
-
+    if (Number.isNaN(date.getTime())) {
+        return String(value);
     }
+
+    return date.toLocaleString();
+}
+
+
+/* =========================================================
+   5. FASTAPI REQUEST HELPER
+========================================================= */
+
+async function api(path, options = {}) {
+    const controller = new AbortController();
+
+    const timeout = setTimeout(() => {
+        controller.abort();
+    }, REQUEST_TIMEOUT);
+
+    try {
+        const response = await fetch(`${API_URL}${path}`, {
+            ...options,
+            signal: controller.signal,
+            headers: {
+                ...(options.body
+                    ? { "Content-Type": "application/json" }
+                    : {}),
+                ...(options.headers || {})
+            }
+        });
+
+        let data = null;
+
+        try {
+            data = await response.json();
+        } catch (_) {
+            // Some responses may not contain JSON.
+        }
+
+        if (!response.ok) {
+            let message =
+                data?.message ||
+                data?.detail ||
+                `Request failed with HTTP ${response.status}.`;
+
+            if (Array.isArray(message)) {
+                message = message
+                    .map(item => item.msg || JSON.stringify(item))
+                    .join("; ");
+            } else if (typeof message !== "string") {
+                message = JSON.stringify(message);
+            }
+
+            throw new Error(message);
+        }
+
+        if (data && data.status === "error") {
+            throw new Error(
+                data.message || "The backend reported an error."
+            );
+        }
+
+        return data;
+
+    } catch (error) {
+        if (error.name === "AbortError") {
+            throw new Error(
+                "The request timed out. Check FastAPI, Ollama and the RAG service."
+            );
+        }
+
+        if (error instanceof TypeError) {
+            throw new Error(
+                `Cannot connect to FastAPI at ${API_URL}. ` +
+                "Start the backend and check the API address."
+            );
+        }
+
+        throw error;
+
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
+
+/* =========================================================
+   6. MOBILE NAVIGATION
+========================================================= */
+
+function showDetailView() {
+    if (!DESKTOP_QUERY.matches) {
+        if (!document.body.classList.contains("show-detail")) {
+            history.pushState(
+                { view: "detail" },
+                "",
+                window.location.href
+            );
+        }
+
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    document.body.classList.add("show-detail");
+}
+
+
+function showListView() {
+    document.body.classList.remove("show-detail");
+}
+
+
+/* =========================================================
+   7. LOAD ALL TICKETS
+========================================================= */
+
+async function loadTickets() {
+    if (isLoadingTickets) return;
+
+    isLoadingTickets = true;
+
+    showConnectionMessage("");
+
+    if (el.refreshIcon) {
+        el.refreshIcon.classList.add("spin");
+    }
+
+    el.refreshButton.disabled = true;
+
+    try {
+        // Backend: GET /tickets
+        const data = await api("/tickets");
+
+        if (!Array.isArray(data)) {
+            throw new Error(
+                "The backend returned an unexpected ticket-list format."
+            );
+        }
+
+        // The backend list is displayed newest first.
+        tickets = [...data].reverse();
+
+        updateStatistics();
+        renderTickets();
+
+    } catch (error) {
+        console.error("Unable to load tickets:", error);
+
+        showConnectionMessage(
+            `${error.message} ` +
+            "Check that FastAPI is running at http://127.0.0.1:8000."
+        );
+
+        el.ticketList.innerHTML = `
+            <li class="empty">
+                Unable to load tickets from the backend.
+                Use Refresh to try again.
+            </li>
+        `;
+
+        el.listCount.textContent = "";
+
+        tickets = [];
+        updateStatistics();
+
+    } finally {
+        isLoadingTickets = false;
+
+        el.refreshButton.disabled = false;
+
+        if (el.refreshIcon) {
+            el.refreshIcon.classList.remove("spin");
+        }
+    }
+}
+
+
+/* =========================================================
+   8. FILTER AND SEARCH
+========================================================= */
+
+function filteredTickets() {
+    const query = el.searchInput.value.trim().toLowerCase();
+
+    return tickets.filter(ticket => {
+        if (
+            currentFilter !== "ALL" &&
+            ticket.status !== currentFilter
+        ) {
+            return false;
+        }
+
+        if (!query) return true;
+
+        const searchableText = [
+            ticket.ticket_id,
+            ticket.subject,
+            ticket.sender,
+            ticket.category,
+            ticket.status,
+            ticket.urgency,
+            ticket.review_status
+        ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+        return searchableText.includes(query);
+    });
+}
+
+
+/* =========================================================
+   9. RENDER TICKET LIST
+========================================================= */
+
+function renderTickets() {
+    const list = filteredTickets();
+
+    el.listCount.textContent = tickets.length
+        ? `${list.length} of ${tickets.length}`
+        : "";
+
+    if (list.length === 0) {
+        el.ticketList.innerHTML = `
+            <li class="empty">
+                ${
+                    tickets.length
+                        ? "No tickets match your search or filter."
+                        : "No tickets available."
+                }
+            </li>
+        `;
+
+        return;
+    }
+
+    el.ticketList.innerHTML = list.map(ticket => {
+        const tags = [];
+
+        if (ticket.category) {
+            tags.push(`
+                <span class="badge">
+                    ${escapeHtml(ticket.category)}
+                </span>
+            `);
+        }
+
+        if (ticket.urgency) {
+            tags.push(`
+                <span class="badge ${urgencyClass(ticket.urgency)}">
+                    ${escapeHtml(ticket.urgency)}
+                </span>
+            `);
+        }
+
+        if (ticket.review_status) {
+            tags.push(`
+                <span class="badge ${reviewClass(ticket.review_status)}">
+                    ${escapeHtml(prettyLabel(ticket.review_status))}
+                </span>
+            `);
+        }
+
+        return `
+            <li
+                class="ticket-item ${
+                    ticket.ticket_id === selectedTicketId ? "selected" : ""
+                }"
+                data-id="${escapeHtml(ticket.ticket_id)}"
+                tabindex="0"
+                role="button"
+                aria-label="Open ticket ${escapeHtml(ticket.ticket_id)}"
+                aria-pressed="${
+                    ticket.ticket_id === selectedTicketId
+                }"
+            >
+                <div class="row">
+                    <span class="tid">
+                        ${escapeHtml(ticket.ticket_id)}
+                    </span>
+
+                    <span class="badge ${statusClass(ticket.status)}">
+                        ${escapeHtml(prettyLabel(ticket.status))}
+                    </span>
+                </div>
+
+                <div class="subject">
+                    ${escapeHtml(ticket.subject || "No subject")}
+                </div>
+
+                <div class="customer">
+                    ${escapeHtml(extractEmail(ticket.sender) || "-")}
+                </div>
+
+                ${
+                    tags.length
+                        ? `<div class="tags">${tags.join("")}</div>`
+                        : ""
+                }
+            </li>
+        `;
+    }).join("");
+}
+
+
+/* =========================================================
+   10. UPDATE STATISTICS
+========================================================= */
+
+function updateStatistics() {
+    const count = status =>
+        tickets.filter(ticket => ticket.status === status).length;
+
+    $("totalTickets").textContent = tickets.length;
+    $("receivedTickets").textContent = count("RECEIVED");
+    $("triagedTickets").textContent = count("TRIAGED");
+    $("inProgressTickets").textContent = count("IN_PROGRESS");
+    $("resolvedTickets").textContent = count("RESOLVED");
+}
+
+
+/* =========================================================
+   11. LOAD ONE TICKET
+========================================================= */
+
+async function loadTicketDetails(ticketId) {
+    if (!ticketId) return;
+
+    try {
+        // Backend: GET /tickets/{ticket_id}
+        const data = await api(
+            `/tickets/${encodeURIComponent(ticketId)}`
+        );
+
+        if (!data || !data.ticket) {
+            throw new Error(
+                "The backend did not return ticket information."
+            );
+        }
+
+        selectedTicketId = data.ticket.ticket_id;
+
+        renderTicketDetails(data);
+        renderTickets();
+
+        showDetailView();
+
+    } catch (error) {
+        console.error("Unable to load ticket details:", error);
+
+        showToast(error.message || "Unable to load ticket details.", true);
+    }
+}
+
+
+/* =========================================================
+   12. RENDER TICKET DETAILS
+========================================================= */
+
+function renderTicketDetails(data) {
+    const ticket = data.ticket;
+    const ai = data.ai_analysis;
+
+    el.noSelection.classList.add("hidden");
+    el.ticketDetails.classList.remove("hidden");
+
+    $("detailSubject").textContent =
+        ticket.subject || "No subject";
+
+    $("detailTicketId").textContent =
+        ticket.ticket_id || "-";
+
+    $("detailSender").textContent =
+        ticket.sender || "-";
+
+    $("detailReceivedAt").textContent =
+        formatDate(ticket.received_at);
+
+    $("detailGmailId").textContent =
+        ticket.gmail_message_id || "-";
+
+    $("detailMessage").textContent =
+        ticket.message || "-";
+
+    setBadge(
+        el.detailStatusBadge,
+        prettyLabel(ticket.status),
+        statusClass(ticket.status)
+    );
+
+    el.statusSelect.value = ticket.status || "RECEIVED";
+
+    setInlineMessage(el.statusMessage, "");
+    setInlineMessage(el.reviewMessage, "");
+
+    // Reset sent metadata before rendering this ticket.
+    el.sentInformation.classList.add("hidden");
+    el.sentAt.textContent = "-";
+
+    /* -----------------------------------------
+       AI ANALYSIS
+    ------------------------------------------ */
+
+    if (!ai) {
+        $("aiSummary").textContent =
+            "No AI analysis is available for this ticket.";
+
+        ["aiCategory", "aiIntent", "aiUrgency", "aiSentiment"]
+            .forEach(id => {
+                $(id).textContent = "-";
+            });
+
+        el.aiTriageId.textContent = "-";
+
+        $("aiKeyDetails").innerHTML = `
+            <li>No AI analysis available.</li>
+        `;
+
+        el.reviewText.value = "";
+        loadedResponseText = "";
+        currentReviewStatus = null;
+
+        setBadge(el.reviewBadge, "Unavailable");
+        setReviewControls(null);
+
+        return;
+    }
+
+    $("aiSummary").textContent = ai.summary || "-";
+    $("aiCategory").textContent = ai.category || "-";
+    $("aiIntent").textContent = ai.intent || "-";
+    $("aiUrgency").textContent = ai.urgency || "-";
+    $("aiSentiment").textContent = ai.sentiment || "-";
+
+    el.aiTriageId.textContent = ai.triage_id || "-";
+
+    // Render key details safely without inserting server text as HTML.
+    const keyList = $("aiKeyDetails");
+
+    keyList.replaceChildren();
+
+    if (Array.isArray(ai.key_details) && ai.key_details.length > 0) {
+        ai.key_details.forEach(detail => {
+            const item = document.createElement("li");
+
+            item.textContent =
+                typeof detail === "string"
+                    ? detail
+                    : JSON.stringify(detail);
+
+            keyList.appendChild(item);
+        });
+    } else {
+        const item = document.createElement("li");
+
+        item.textContent = "No key details available.";
+
+        keyList.appendChild(item);
+    }
+
+    /* -----------------------------------------
+       HUMAN REVIEW
+    ------------------------------------------ */
+
+    loadedResponseText =
+        ai.final_response || ai.ai_response || "";
+
+    el.reviewText.value = loadedResponseText;
+
+    currentReviewStatus = ai.review_status || "PENDING_REVIEW";
+
+    setBadge(
+        el.reviewBadge,
+        prettyLabel(currentReviewStatus),
+        reviewClass(currentReviewStatus)
+    );
+
+    setReviewControls(currentReviewStatus);
+
+    if (currentReviewStatus === "SENT") {
+        if (ai.sent_at) {
+            el.sentInformation.classList.remove("hidden");
+
+            el.sentAt.textContent = formatDate(ai.sent_at);
+        }
+
+        setInlineMessage(
+            el.reviewMessage,
+            "This response has already been sent to the customer."
+        );
+    }
+}
+
+
+/* =========================================================
+   13. REVIEW BUTTON STATES
+========================================================= */
+
+function setReviewControls(reviewStatus) {
+    const sent = reviewStatus === "SENT";
+    const noDraft = reviewStatus === null;
+
+    el.reviewText.disabled = sent || noDraft;
+    el.approveButton.disabled = sent || noDraft;
+    el.saveEditButton.disabled = sent || noDraft;
+    el.sendButton.disabled = sent || noDraft;
+
+    el.sendButton.textContent = sent
+        ? "Already Sent"
+        : "Send to Customer";
+
+    el.approveButton.textContent =
+        reviewStatus === "APPROVED"
+            ? "Approved"
+            : "Approve As-Is";
+
+    el.approveButton.disabled =
+        sent || noDraft || reviewStatus === "APPROVED";
+}
+
+
+/* =========================================================
+   14. BUTTON BUSY STATE
+========================================================= */
+
+async function withBusy(button, task) {
+    const originalText = button.textContent;
+
+    button.disabled = true;
+
+    try {
+        await task();
+    } finally {
+        button.textContent = originalText;
+
+        if (button === el.updateStatusButton) {
+            button.disabled = false;
+        }
+
+        setReviewControls(currentReviewStatus);
+    }
+}
+
+
+/* =========================================================
+   15. UPDATE TICKET STATUS
+========================================================= */
+
+async function updateTicketStatus() {
+    if (!selectedTicketId) {
+        showToast("Select a ticket first.", true);
+        return;
+    }
+
+    await withBusy(el.updateStatusButton, async () => {
+        try {
+            const ticketId = selectedTicketId;
+            const newStatus = el.statusSelect.value;
+
+            // Backend: PUT /tickets/{ticket_id}
+            await api(
+                `/tickets/${encodeURIComponent(ticketId)}`,
+                {
+                    method: "PUT",
+                    body: JSON.stringify({
+                        status: newStatus
+                    })
+                }
+            );
+
+            showToast("Ticket status updated successfully.");
+
+            await loadTickets();
+            await loadTicketDetails(ticketId);
+
+        } catch (error) {
+            setInlineMessage(
+                el.statusMessage,
+                error.message || "Unable to update ticket status.",
+                true
+            );
+        }
+    });
+}
+
+
+/* =========================================================
+   16. SAVE EDITED RESPONSE
+========================================================= */
+
+async function saveEdit(silent = false) {
+    if (!selectedTicketId) {
+        throw new Error("Select a ticket first.");
+    }
+
+    const text = el.reviewText.value.trim();
+
+    if (!text) {
+        throw new Error("Response text cannot be empty.");
+    }
+
+    const ticketId = selectedTicketId;
+
+    // Backend: PUT /tickets/{ticket_id}/edit
+    const result = await api(
+        `/tickets/${encodeURIComponent(ticketId)}/edit`,
+        {
+            method: "PUT",
+            body: JSON.stringify({
+                final_response: text
+            })
+        }
+    );
+
+    loadedResponseText = text;
+    currentReviewStatus = "EDITED";
+
+    setBadge(
+        el.reviewBadge,
+        "EDITED",
+        reviewClass("EDITED")
+    );
+
+    setReviewControls(currentReviewStatus);
+
+    if (!silent) {
+        showToast(result.message || "Response edit saved.");
+    }
+
+    return result;
+}
+
+
+/* =========================================================
+   17. SAVE EDIT BUTTON
+========================================================= */
+
+async function saveEditedResponse() {
+    if (!selectedTicketId) {
+        showToast("Select a ticket first.", true);
+        return;
+    }
+
+    await withBusy(el.saveEditButton, async () => {
+        try {
+            const ticketId = selectedTicketId;
+
+            await saveEdit(false);
+
+            await loadTickets();
+            await loadTicketDetails(ticketId);
+
+        } catch (error) {
+            setInlineMessage(
+                el.reviewMessage,
+                error.message || "Unable to save the response.",
+                true
+            );
+        }
+    });
+}
+
+
+/* =========================================================
+   18. APPROVE RESPONSE
+========================================================= */
+
+async function approveResponse() {
+    if (!selectedTicketId) {
+        showToast("Select a ticket first.", true);
+        return;
+    }
+
+    await withBusy(el.approveButton, async () => {
+        try {
+            const ticketId = selectedTicketId;
+
+            const currentText = el.reviewText.value.trim();
+
+            if (!currentText) {
+                throw new Error("Response text cannot be empty.");
+            }
+
+            // Save the latest text first if the user changed it.
+            if (currentText !== loadedResponseText.trim()) {
+                await saveEdit(true);
+            }
+
+            // Backend: POST /tickets/{ticket_id}/approve
+            const result = await api(
+                `/tickets/${encodeURIComponent(ticketId)}/approve`,
+                {
+                    method: "POST"
+                }
+            );
+
+            showToast(result.message || "Response approved.");
+
+            await loadTickets();
+            await loadTicketDetails(ticketId);
+
+        } catch (error) {
+            setInlineMessage(
+                el.reviewMessage,
+                error.message || "Unable to approve the response.",
+                true
+            );
+        }
+    });
+}
+
+
+/* =========================================================
+   19. SEND RESPONSE TO CUSTOMER
+========================================================= */
+
+async function sendToCustomer() {
+    if (!selectedTicketId) {
+        showToast("Select a ticket first.", true);
+        return;
+    }
+
+    if (currentReviewStatus === "SENT") {
+        showToast("This response has already been sent.", true);
+        return;
+    }
+
+    const responseText = el.reviewText.value.trim();
+
+    if (!responseText) {
+        showToast("The response cannot be empty.", true);
+        return;
+    }
+
+    const confirmed = window.confirm(
+        "Send this response to the customer using Gmail?"
+    );
+
+    if (!confirmed) return;
+
+    await withBusy(el.sendButton, async () => {
+        const ticketId = selectedTicketId;
+
+        el.sendButton.textContent = "Sending...";
+
+        try {
+            const id = encodeURIComponent(ticketId);
+
+            // Ensure the text shown in the editor is saved.
+            const edited =
+                el.reviewText.value.trim() !==
+                loadedResponseText.trim();
+
+            if (edited) {
+                await saveEdit(true);
+            }
+
+            // The backend requires APPROVED or EDITED before sending.
+            if (
+                currentReviewStatus !== "APPROVED" &&
+                currentReviewStatus !== "EDITED"
+            ) {
+                await api(`/tickets/${id}/approve`, {
+                    method: "POST"
+                });
+
+                currentReviewStatus = "APPROVED";
+            }
+
+            // Backend: POST /tickets/{ticket_id}/send
+            const result = await api(
+                `/tickets/${id}/send`,
+                {
+                    method: "POST"
+                }
+            );
+
+            // Success is shown only after FastAPI confirms the request.
+            showToast(
+                result.message || "Response sent successfully."
+            );
+
+            await loadTickets();
+            await loadTicketDetails(ticketId);
+
+        } catch (error) {
+            console.error("Unable to send response:", error);
+
+            setInlineMessage(
+                el.reviewMessage,
+                error.message || "Unable to send the response.",
+                true
+            );
+
+            showToast("Sending failed. Check the error message.", true);
+
+            // Reload server state because the result of a failed
+            // network request may be uncertain.
+            await loadTickets();
+            await loadTicketDetails(ticketId);
+        }
+    });
+}
+
+
+/* =========================================================
+   20. REFRESH BUTTON
+========================================================= */
+
+async function refreshDashboard() {
+    await loadTickets();
+
+    // Keep the currently selected ticket open and refresh its data.
+    if (selectedTicketId) {
+        await loadTicketDetails(selectedTicketId);
+    }
+}
+
+
+/* =========================================================
+   21. EVENT LISTENERS
+========================================================= */
+
+// Refresh dashboard.
+el.refreshButton.addEventListener(
+    "click",
+    refreshDashboard
 );
 
 
-updateStatusButton.addEventListener(
+// Back button for mobile ticket details.
+el.backButton.addEventListener("click", () => {
+    if (
+        !DESKTOP_QUERY.matches &&
+        history.state &&
+        history.state.view === "detail"
+    ) {
+        history.back();
+    } else {
+        showListView();
+    }
+});
+
+
+// Update ticket status.
+el.updateStatusButton.addEventListener(
     "click",
     updateTicketStatus
 );
 
 
-approveButton.addEventListener(
+// Human review actions.
+el.approveButton.addEventListener(
     "click",
     approveResponse
 );
 
-
-saveEditButton.addEventListener(
+el.saveEditButton.addEventListener(
     "click",
     saveEditedResponse
 );
 
-
-sendButton.addEventListener(
+el.sendButton.addEventListener(
     "click",
     sendToCustomer
 );
 
 
-// =========================================================
-// INITIAL DASHBOARD LOAD
-// =========================================================
+// Search.
+el.searchInput.addEventListener("input", renderTickets);
 
-loadTickets();
+
+// Open a ticket using mouse/touch.
+el.ticketList.addEventListener("click", event => {
+    const item = event.target.closest(".ticket-item");
+
+    if (item) {
+        loadTicketDetails(item.dataset.id);
+    }
+});
+
+
+// Open a ticket using keyboard.
+el.ticketList.addEventListener("keydown", event => {
+    if (event.key !== "Enter" && event.key !== " ") {
+        return;
+    }
+
+    const item = event.target.closest(".ticket-item");
+
+    if (item) {
+        event.preventDefault();
+
+        loadTicketDetails(item.dataset.id);
+    }
+});
+
+
+// Statistics act as status filters.
+document.querySelectorAll(".stat-card").forEach(card => {
+    card.addEventListener("click", () => {
+        currentFilter = card.dataset.filter;
+
+        document.querySelectorAll(".stat-card").forEach(item => {
+            item.classList.toggle("active", item === card);
+        });
+
+        showListView();
+        renderTickets();
+    });
+});
+
+
+// Mobile browser Back button.
+window.addEventListener("popstate", () => {
+    showListView();
+});
+
+
+// Adjust navigation when the browser changes size.
+DESKTOP_QUERY.addEventListener("change", () => {
+    if (DESKTOP_QUERY.matches) {
+        document.body.classList.remove("show-detail");
+    }
+});
+
+
+/* =========================================================
+   22. START APPLICATION
+========================================================= */
+
+async function initializeDashboard() {
+    try {
+        // Confirm that FastAPI is reachable before loading tickets.
+        // Backend: GET /
+        await api("/");
+
+        await loadTickets();
+
+    } catch (error) {
+        console.error("Backend initialization failed:", error);
+
+        showConnectionMessage(
+            `${error.message} Start FastAPI and refresh this page.`
+        );
+
+        el.ticketList.innerHTML = `
+            <li class="empty">
+                Backend connection unavailable.
+            </li>
+        `;
+    }
+}
+
+initializeDashboard();

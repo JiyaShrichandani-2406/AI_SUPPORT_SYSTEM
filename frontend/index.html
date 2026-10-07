@@ -1,9 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1, viewport-fit=cover"
+    >
+
+    <meta
+        name="theme-color"
+        content="#111827"
+    >
+
+    <meta
+        name="description"
+        content="AI Technical Support System - Support Engineer Dashboard"
+    >
 
     <title>AI Technical Support System</title>
 
@@ -12,295 +24,642 @@
 
 <body>
 
+<!-- =========================================================
+     HEADER
+========================================================= -->
+
+<header class="top-header">
+
+    <div class="brand">
+        <h1>AI Technical Support</h1>
+        <p>Support Engineer Dashboard</p>
+    </div>
+
+    <button
+        id="refreshButton"
+        class="btn btn-light"
+        type="button"
+        aria-label="Refresh tickets"
+    >
+        <span
+            class="refresh-icon"
+            aria-hidden="true"
+        >
+            &#x21bb;
+        </span>
+
+        <span class="btn-text">
+            Refresh
+        </span>
+    </button>
+
+</header>
+
+
+<!-- =========================================================
+     TICKET STATISTICS
+========================================================= -->
+
+<section
+    class="stats"
+    aria-label="Ticket statistics"
+>
+
+    <button
+        class="stat-card active"
+        data-filter="ALL"
+        type="button"
+    >
+        <span class="stat-label">
+            Total
+        </span>
+
+        <span
+            id="totalTickets"
+            class="stat-value"
+        >
+            0
+        </span>
+    </button>
+
+
+    <button
+        class="stat-card"
+        data-filter="RECEIVED"
+        type="button"
+    >
+        <span class="stat-label">
+            Received
+        </span>
+
+        <span
+            id="receivedTickets"
+            class="stat-value"
+        >
+            0
+        </span>
+    </button>
+
+
+    <button
+        class="stat-card"
+        data-filter="TRIAGED"
+        type="button"
+    >
+        <span class="stat-label">
+            Triaged
+        </span>
+
+        <span
+            id="triagedTickets"
+            class="stat-value"
+        >
+            0
+        </span>
+    </button>
+
+
+    <button
+        class="stat-card"
+        data-filter="IN_PROGRESS"
+        type="button"
+    >
+        <span class="stat-label">
+            In Progress
+        </span>
+
+        <span
+            id="inProgressTickets"
+            class="stat-value"
+        >
+            0
+        </span>
+    </button>
+
+
+    <button
+        class="stat-card"
+        data-filter="RESOLVED"
+        type="button"
+    >
+        <span class="stat-label">
+            Resolved
+        </span>
+
+        <span
+            id="resolvedTickets"
+            class="stat-value"
+        >
+            0
+        </span>
+    </button>
+
+</section>
+
+
+<!-- =========================================================
+     MAIN APPLICATION
+========================================================= -->
+
+<main
+    id="layout"
+    class="layout"
+>
+
+
     <!-- =====================================================
-         HEADER
+         LEFT PANEL - TICKET LIST
     ====================================================== -->
 
-    <header class="top-header">
+    <aside
+        id="listPanel"
+        class="panel list-panel"
+    >
 
-        <div>
-            <h1>AI Technical Support System</h1>
-            <p>Technical Support Engineer Dashboard</p>
+        <div class="panel-head">
+
+            <h2>
+                Support Tickets
+            </h2>
+
+            <span
+                id="listCount"
+                class="muted small"
+            ></span>
+
         </div>
 
-        <button id="refreshButton" class="refresh-button">
-            Refresh Tickets
-        </button>
 
-    </header>
+        <!-- Search -->
+
+        <div class="search-row">
+
+            <input
+                id="searchInput"
+                type="search"
+                placeholder="Search ID, subject, customer..."
+                autocomplete="off"
+                aria-label="Search tickets"
+            >
+
+        </div>
+
+
+        <!-- Backend connection error -->
+
+        <div
+            id="connectionMessage"
+            class="alert alert-error hidden"
+            role="alert"
+        ></div>
+
+
+        <!-- Ticket list -->
+
+        <ul
+            id="ticketList"
+            class="ticket-list"
+            aria-live="polite"
+        >
+
+            <li class="empty">
+                Loading tickets...
+            </li>
+
+        </ul>
+
+    </aside>
+
 
 
     <!-- =====================================================
-         DASHBOARD STATISTICS
+         RIGHT PANEL - TICKET DETAILS
     ====================================================== -->
 
-    <section class="stats-container">
+    <section
+        id="detailPanel"
+        class="panel detail-panel"
+    >
 
-        <div class="stat-card">
-            <span class="stat-label">Total Tickets</span>
-            <span id="totalTickets" class="stat-value">0</span>
-        </div>
-
-        <div class="stat-card">
-            <span class="stat-label">Received</span>
-            <span id="receivedTickets" class="stat-value">0</span>
-        </div>
-
-        <div class="stat-card">
-            <span class="stat-label">Triaged</span>
-            <span id="triagedTickets" class="stat-value">0</span>
-        </div>
-
-        <div class="stat-card">
-            <span class="stat-label">In Progress</span>
-            <span id="inProgressTickets" class="stat-value">0</span>
-        </div>
-
-        <div class="stat-card">
-            <span class="stat-label">Resolved</span>
-            <span id="resolvedTickets" class="stat-value">0</span>
-        </div>
-
-    </section>
-
-
-    <!-- =====================================================
-         MAIN DASHBOARD
-    ====================================================== -->
-
-    <main class="dashboard-container">
 
         <!-- =================================================
-             TICKET LIST
+             NOTHING SELECTED
         ================================================== -->
 
-        <section class="panel ticket-list-panel">
+        <div
+            id="noSelection"
+            class="no-selection"
+        >
 
-            <div class="panel-header">
-                <div>
-                    <h2>Support Tickets</h2>
-                    <p>Select a ticket to view its details.</p>
-                </div>
+            <div
+                class="no-selection-icon"
+                aria-hidden="true"
+            >
+                &#9993;
             </div>
 
-            <div id="connectionMessage" class="message-box hidden"></div>
+            <h2>
+                Select a ticket
+            </h2>
 
-            <div class="table-container">
+            <p>
+                Choose a ticket from the list to view the
+                customer message, AI triage analysis and
+                client response.
+            </p>
 
-                <table>
+        </div>
 
-                    <thead>
-                        <tr>
-                            <th>Ticket ID</th>
-                            <th>Subject</th>
-                            <th>Customer</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-
-                    <tbody id="ticketTableBody">
-
-                        <tr>
-                            <td colspan="4" class="empty-row">
-                                Loading tickets...
-                            </td>
-                        </tr>
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </section>
 
 
         <!-- =================================================
-             TICKET DETAILS
-             Hidden until a ticket is selected
+             SELECTED TICKET
         ================================================== -->
 
-        <section id="ticketDetailsSection" class="panel details-panel hidden">
+        <div
+            id="ticketDetails"
+            class="hidden"
+        >
 
-            <div class="panel-header">
 
-                <div>
-                    <h2>Ticket Details</h2>
-                    <p>Complete ticket information and AI analysis.</p>
-                </div>
+            <!-- ---------------------------------------------
+                 TOP SECTION
+            ---------------------------------------------- -->
 
-                <span id="detailStatusBadge" class="status-badge">
+            <div class="detail-top">
+
+                <button
+                    id="backButton"
+                    class="btn btn-ghost back-btn"
+                    type="button"
+                >
+                    &larr; Tickets
+                </button>
+
+
+                <span
+                    id="detailStatusBadge"
+                    class="badge"
+                >
                     -
                 </span>
 
             </div>
 
 
+            <!-- Ticket subject -->
+
+            <h2
+                id="detailSubject"
+                class="detail-title"
+            >
+                -
+            </h2>
+
+
+
             <!-- =================================================
-                 BASIC TICKET INFORMATION
+                 TICKET INFORMATION
             ================================================== -->
 
-            <div class="detail-card">
+            <div class="card">
 
-                <h3>Ticket Information</h3>
+                <h3>
+                    Ticket Information
+                </h3>
 
-                <div class="info-grid">
 
-                    <div class="info-item">
-                        <span class="info-label">Ticket ID</span>
-                        <span id="detailTicketId" class="info-value">-</span>
+                <dl class="info-grid">
+
+                    <div>
+                        <dt>
+                            Ticket ID
+                        </dt>
+
+                        <dd id="detailTicketId">
+                            -
+                        </dd>
                     </div>
 
-                    <div class="info-item">
-                        <span class="info-label">Customer</span>
-                        <span id="detailSender" class="info-value">-</span>
+
+                    <div>
+                        <dt>
+                            Customer
+                        </dt>
+
+                        <dd id="detailSender">
+                            -
+                        </dd>
                     </div>
 
-                    <div class="info-item">
-                        <span class="info-label">Subject</span>
-                        <span id="detailSubject" class="info-value">-</span>
+
+                    <div>
+                        <dt>
+                            Received
+                        </dt>
+
+                        <dd id="detailReceivedAt">
+                            -
+                        </dd>
                     </div>
 
-                    <div class="info-item">
-                        <span class="info-label">Received At</span>
-                        <span id="detailReceivedAt" class="info-value">-</span>
+
+                    <div>
+                        <dt>
+                            Gmail Message ID
+                        </dt>
+
+                        <dd id="detailGmailId">
+                            -
+                        </dd>
                     </div>
 
-                    <div class="info-item">
-                        <span class="info-label">Gmail Message ID</span>
-                        <span id="detailGmailId" class="info-value">-</span>
-                    </div>
-
-                </div>
+                </dl>
 
             </div>
+
 
 
             <!-- =================================================
                  CUSTOMER MESSAGE
             ================================================== -->
 
-            <div class="detail-card">
+            <div class="card">
 
-                <h3>Customer Message</h3>
+                <h3>
+                    Customer Message
+                </h3>
 
-                <div id="detailMessage" class="customer-message">
+                <div
+                    id="detailMessage"
+                    class="message-box"
+                >
                     -
                 </div>
 
             </div>
 
 
+
             <!-- =================================================
-                 AI TRIAGE
+                 AI TRIAGE ANALYSIS
             ================================================== -->
 
-            <div class="detail-card ai-card">
+            <div class="card card-ai">
 
-                <div class="ai-heading">
+                <div class="card-head">
 
                     <div>
-                        <h3>AI Triage Analysis</h3>
-                        <p>Analysis generated by the local AI model.</p>
+
+                        <h3>
+                            AI Triage Analysis
+                        </h3>
+
+                        <p class="muted small">
+                            Generated from the customer support ticket.
+                        </p>
+
                     </div>
 
                 </div>
 
 
-                <div class="ai-grid">
+                <!-- AI summary -->
 
-                    <div class="ai-item">
-                        <span class="info-label">Summary</span>
-                        <span id="aiSummary" class="info-value">-</span>
-                    </div>
+                <p
+                    id="aiSummary"
+                    class="summary"
+                >
+                    -
+                </p>
 
-                    <div class="ai-item">
-                        <span class="info-label">Category</span>
-                        <span id="aiCategory" class="info-value">-</span>
-                    </div>
 
-                    <div class="ai-item">
-                        <span class="info-label">Intent</span>
-                        <span id="aiIntent" class="info-value">-</span>
-                    </div>
+                <!-- AI classification -->
 
-                    <div class="ai-item">
-                        <span class="info-label">Urgency</span>
-                        <span id="aiUrgency" class="info-value">-</span>
-                    </div>
+                <div class="chips">
 
-                    <div class="ai-item">
-                        <span class="info-label">Sentiment</span>
-                        <span id="aiSentiment" class="info-value">-</span>
-                    </div>
+                    <span class="chip">
+
+                        <em>
+                            Category
+                        </em>
+
+                        <b id="aiCategory">
+                            -
+                        </b>
+
+                    </span>
+
+
+                    <span class="chip">
+
+                        <em>
+                            Intent
+                        </em>
+
+                        <b id="aiIntent">
+                            -
+                        </b>
+
+                    </span>
+
+
+                    <span class="chip">
+
+                        <em>
+                            Urgency
+                        </em>
+
+                        <b id="aiUrgency">
+                            -
+                        </b>
+
+                    </span>
+
+
+                    <span class="chip">
+
+                        <em>
+                            Sentiment
+                        </em>
+
+                        <b id="aiSentiment">
+                            -
+                        </b>
+
+                    </span>
 
                 </div>
 
 
-                <div class="key-details-section">
+                <!-- Key details -->
 
-                    <h4>Key Details</h4>
+                <h4>
+                    Key Details
+                </h4>
 
-                    <ul id="aiKeyDetails">
-                        <li>No details available.</li>
-                    </ul>
+                <ul
+                    id="aiKeyDetails"
+                    class="key-details"
+                >
+                    <li>
+                        No details available.
+                    </li>
+                </ul>
+
+
+                <!-- Triage ID -->
+
+                <div class="ai-meta">
+
+                    <span class="muted small">
+                        Triage ID:
+                    </span>
+
+                    <strong
+                        id="aiTriageId"
+                        class="small"
+                    >
+                        -
+                    </strong>
 
                 </div>
 
             </div>
 
+
+
             <!-- =================================================
-                 HUMAN REVIEW — CLIENT RESPONSE
+                 HUMAN REVIEW / CLIENT RESPONSE
             ================================================== -->
 
-            <div class="detail-card review-card">
+            <div class="card card-review">
 
-                <div class="review-heading">
+                <div class="card-head">
 
                     <div>
-                        <h3>Client Response (Human Review)</h3>
-                        <p>Review the AI's draft, edit if needed, then send it.</p>
+
+                        <h3>
+                            Client Response
+                        </h3>
+
+                        <p class="muted small">
+                            Review the AI-generated response,
+                            edit it if required, approve it,
+                            and send it to the customer.
+                        </p>
+
                     </div>
 
-                    <span id="reviewStatusBadge" class="status-badge">
+
+                    <span
+                        id="reviewStatusBadge"
+                        class="badge"
+                    >
                         -
                     </span>
 
                 </div>
 
-                <textarea id="reviewResponseText" class="review-textarea" rows="10"></textarea>
 
-                <div class="review-controls">
+                <!-- Response editor -->
 
-                    <button id="approveButton" class="secondary-button">
+                <textarea
+                    id="reviewResponseText"
+                    rows="10"
+                    aria-label="Response to customer"
+                    placeholder="AI-generated client response will appear here..."
+                ></textarea>
+
+
+                <!-- Review actions -->
+
+                <div class="actions">
+
+                    <button
+                        id="approveButton"
+                        class="btn btn-outline"
+                        type="button"
+                    >
                         Approve As-Is
                     </button>
 
-                    <button id="saveEditButton" class="secondary-button">
+
+                    <button
+                        id="saveEditButton"
+                        class="btn btn-outline"
+                        type="button"
+                    >
                         Save Edit
                     </button>
 
-                    <button id="sendButton" class="primary-button">
+
+                    <button
+                        id="sendButton"
+                        class="btn btn-primary"
+                        type="button"
+                    >
                         Send to Customer
                     </button>
 
                 </div>
 
-                <p id="reviewMessage" class="status-message"></p>
+
+                <!-- Review message -->
+
+                <p
+                    id="reviewMessage"
+                    class="inline-msg"
+                    role="status"
+                ></p>
+
+
+                <!-- Sent information -->
+
+                <div
+                    id="sentInformation"
+                    class="sent-information hidden"
+                >
+
+                    <span class="muted small">
+                        Response sent:
+                    </span>
+
+                    <span
+                        id="sentAt"
+                        class="small"
+                    >
+                        -
+                    </span>
+
+                </div>
 
             </div>
 
+
+
             <!-- =================================================
-                 STATUS MANAGEMENT
+                 TICKET STATUS
             ================================================== -->
 
-            <div class="detail-card">
+            <div class="card">
 
-                <h3>Ticket Status</h3>
+                <h3>
+                    Ticket Status
+                </h3>
+
+
+                <p class="muted small status-help">
+                    Update the current support workflow status.
+                </p>
+
 
                 <div class="status-controls">
 
-                    <select id="statusSelect">
+                    <select
+                        id="statusSelect"
+                        aria-label="Ticket status"
+                    >
 
                         <option value="RECEIVED">
                             RECEIVED
@@ -320,57 +679,52 @@
 
                     </select>
 
-                    <button id="updateStatusButton" class="primary-button">
+
+                    <button
+                        id="updateStatusButton"
+                        class="btn btn-primary"
+                        type="button"
+                    >
                         Update Status
                     </button>
 
                 </div>
 
-                <p id="statusMessage" class="status-message"></p>
+
+                <p
+                    id="statusMessage"
+                    class="inline-msg"
+                    role="status"
+                ></p>
 
             </div>
 
+        </div>
 
-        </section>
+    </section>
 
-
-        <!-- =================================================
-             NO TICKET SELECTED
-        ================================================== -->
-
-        <section id="noSelectionSection" class="panel no-selection">
-
-            <div class="no-selection-content">
-
-                <h2>Select a Ticket</h2>
-
-                <p>
-                    Select a support ticket from the list to view
-                    the customer's message and AI triage analysis.
-                </p>
-
-            </div>
-
-        </section>
-
-    </main>
+</main>
 
 
-    <!-- =====================================================
-         FOOTER
-    ====================================================== -->
 
-    <footer class="footer">
+<!-- =========================================================
+     TOAST NOTIFICATION
+========================================================= -->
 
-        <p>
-            AI Technical Support System
-        </p>
+<div
+    id="toast"
+    class="toast hidden"
+    role="status"
+    aria-live="polite"
+></div>
 
-    </footer>
 
 
-    <script src="script.js"></script>
+<!-- =========================================================
+     FRONTEND JAVASCRIPT
+========================================================= -->
+
+<script src="script.js"></script>
 
 </body>
-
 </html>

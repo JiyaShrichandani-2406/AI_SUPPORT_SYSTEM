@@ -1,18 +1,118 @@
 /* =========================================================
-   GLOBAL
+   AI TECHNICAL SUPPORT SYSTEM
+   Support Engineer Dashboard
+   Responsive / Mobile First
 ========================================================= */
 
-* {
+
+/* =========================================================
+   ROOT VARIABLES
+========================================================= */
+
+:root {
+    --bg: #f3f5f9;
+    --surface: #ffffff;
+    --surface-2: #f8fafc;
+
+    --border: #e5e7eb;
+    --border-dark: #d1d5db;
+
+    --text: #111827;
+    --text-secondary: #374151;
+    --muted: #6b7280;
+
+    --brand: #2563eb;
+    --brand-dark: #1d4ed8;
+    --brand-soft: #eff6ff;
+
+    --header: #111827;
+
+    --success: #166534;
+    --success-bg: #dcfce7;
+
+    --warning: #92400e;
+    --warning-bg: #fef3c7;
+
+    --danger: #991b1b;
+    --danger-bg: #fee2e2;
+
+    --info: #075985;
+    --info-bg: #e0f2fe;
+
+    --purple: #5b21b6;
+    --purple-bg: #ede9fe;
+
+    --radius: 12px;
+
+    --shadow:
+        0 1px 3px rgba(16, 24, 40, 0.08),
+        0 1px 2px rgba(16, 24, 40, 0.04);
+
+    --shadow-lg:
+        0 8px 24px rgba(16, 24, 40, 0.10);
+
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+
+/* =========================================================
+   RESET
+========================================================= */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
 }
 
 body {
-    font-family: Arial, Helvetica, sans-serif;
-    background: #f4f6f8;
-    color: #1f2937;
+    font-family:
+        system-ui,
+        -apple-system,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+
+    background: var(--bg);
+    color: var(--text);
+
+    line-height: 1.5;
+
     min-height: 100vh;
+
+    padding-bottom: var(--safe-bottom);
+}
+
+button,
+input,
+textarea,
+select {
+    font-family: inherit;
+}
+
+button {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.muted {
+    color: var(--muted);
+}
+
+.small {
+    font-size: 13px;
 }
 
 
@@ -21,26 +121,48 @@ body {
 ========================================================= */
 
 .top-header {
-    background: #1f2937;
-    color: white;
+    position: sticky;
+    top: 0;
 
-    padding: 22px 35px;
+    z-index: 20;
+
+    background: var(--header);
+    color: #ffffff;
+
+    padding:
+        calc(12px + var(--safe-top))
+        16px
+        12px;
 
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
 
-    gap: 20px;
+    gap: 12px;
+
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
-.top-header h1 {
-    font-size: 25px;
-    margin-bottom: 6px;
+.brand {
+    min-width: 0;
 }
 
-.top-header p {
-    font-size: 14px;
-    color: #d1d5db;
+.brand h1 {
+    font-size: 17px;
+    line-height: 1.2;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.brand p {
+    margin-top: 2px;
+
+    font-size: 12px;
+
+    color: #9ca3af;
 }
 
 
@@ -48,35 +170,101 @@ body {
    BUTTONS
 ========================================================= */
 
-.refresh-button,
-.primary-button {
-    border: none;
-    border-radius: 7px;
+.btn {
+    display: inline-flex;
 
-    padding: 10px 16px;
+    align-items: center;
+    justify-content: center;
 
+    gap: 6px;
+
+    min-height: 44px;
+
+    padding: 0 16px;
+
+    border-radius: 9px;
+
+    border: 1px solid transparent;
+
+    font: inherit;
     font-size: 14px;
     font-weight: 600;
 
     cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        color 0.15s ease,
+        opacity 0.15s ease,
+        transform 0.1s ease;
 }
 
-.refresh-button {
-    background: white;
-    color: #1f2937;
+.btn:active:not(:disabled) {
+    transform: translateY(1px);
 }
 
-.refresh-button:hover {
+.btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: var(--brand);
+    color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--brand-dark);
+}
+
+.btn-outline {
+    background: #ffffff;
+    color: var(--brand);
+    border-color: var(--brand);
+}
+
+.btn-outline:hover:not(:disabled) {
+    background: var(--brand-soft);
+}
+
+.btn-light {
+    background: #ffffff;
+    color: var(--header);
+
+    min-height: 40px;
+}
+
+.btn-light:hover {
     background: #e5e7eb;
 }
 
-.primary-button {
-    background: #2563eb;
-    color: white;
+.btn-ghost {
+    background: transparent;
+    color: var(--brand);
+
+    padding: 0 8px;
+
+    min-height: 40px;
 }
 
-.primary-button:hover {
-    background: #1d4ed8;
+.btn-ghost:hover {
+    background: var(--brand-soft);
+}
+
+.refresh-icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.refresh-icon.spin {
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 
@@ -84,378 +272,390 @@ body {
    STATISTICS
 ========================================================= */
 
-.stats-container {
+.stats {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
 
-    gap: 18px;
+    grid-template-columns:
+        repeat(2, 1fr);
 
-    padding: 25px 35px 10px;
+    gap: 10px;
+
+    padding:
+        14px
+        16px
+        0;
 }
 
 .stat-card {
-    background: white;
+    background: var(--surface);
 
-    border-radius: 10px;
+    border: 2px solid transparent;
 
-    padding: 20px;
+    border-radius: var(--radius);
 
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+    box-shadow: var(--shadow);
+
+    padding: 12px 14px;
 
     display: flex;
     flex-direction: column;
-
-    align-items: center;
-    justify-content: center;
-}
-
-.stat-label {
-    color: #6b7280;
-
-    font-size: 13px;
-    font-weight: 600;
-
-    margin-bottom: 8px;
-}
-
-.stat-value {
-    font-size: 28px;
-    font-weight: 700;
-    color: #111827;
-}
-
-
-/* =========================================================
-   MAIN CONTAINER
-========================================================= */
-
-.dashboard-container {
-    padding: 15px 35px 35px;
-}
-
-
-/* =========================================================
-   PANEL
-========================================================= */
-
-.panel {
-    background: white;
-
-    border-radius: 10px;
-
-    padding: 22px;
-
-    margin-top: 15px;
-
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-}
-
-.panel-header {
-    display: flex;
-    justify-content: space-between;
     align-items: flex-start;
 
-    gap: 20px;
+    font: inherit;
+    color: inherit;
 
-    margin-bottom: 18px;
-}
-
-.panel-header h2 {
-    font-size: 19px;
-    margin-bottom: 5px;
-}
-
-.panel-header p {
-    color: #6b7280;
-    font-size: 13px;
-}
-
-
-/* =========================================================
-   TICKET TABLE
-========================================================= */
-
-.table-container {
-    width: 100%;
-    overflow-x: auto;
-}
-
-table {
-    width: 100%;
-
-    border-collapse: collapse;
-}
-
-thead {
-    background: #f3f4f6;
-}
-
-th,
-td {
-    padding: 13px 12px;
-
-    border-bottom: 1px solid #e5e7eb;
+    cursor: pointer;
 
     text-align: left;
 
-    font-size: 13px;
+    transition:
+        border-color 0.15s ease,
+        background 0.15s ease,
+        transform 0.15s ease;
 }
 
-th {
-    color: #374151;
-    font-weight: 700;
+.stat-card:hover {
+    transform: translateY(-1px);
 }
 
-.ticket-row {
-    cursor: pointer;
-    transition: background 0.15s ease;
+.stat-card:first-child {
+    grid-column: span 2;
 }
 
-.ticket-row:hover {
-    background: #f9fafb;
+.stat-card.active {
+    border-color: var(--brand);
+    background: var(--brand-soft);
 }
 
-.ticket-row.selected {
-    background: #eff6ff;
-}
-
-.ticket-id {
-    font-weight: 700;
-    color: #2563eb;
-}
-
-.empty-row {
-    text-align: center;
-    color: #6b7280;
-    padding: 25px;
-}
-
-
-/* =========================================================
-   STATUS BADGES
-========================================================= */
-
-.status-badge {
-    display: inline-block;
-
-    padding: 6px 10px;
-
-    border-radius: 6px;
-
-    font-size: 11px;
-    font-weight: 700;
-
-    background: #e5e7eb;
-    color: #374151;
-}
-
-.status-received {
-    background: #e0f2fe;
-    color: #075985;
-}
-
-.status-triaged {
-    background: #ede9fe;
-    color: #5b21b6;
-}
-
-.status-in-progress {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.status-resolved {
-    background: #dcfce7;
-    color: #166534;
-}
-
-
-/* =========================================================
-   DETAILS
-========================================================= */
-
-.detail-card {
-    border: 1px solid #e5e7eb;
-
-    border-radius: 8px;
-
-    padding: 18px;
-
-    margin-bottom: 18px;
-}
-
-.detail-card h3 {
-    font-size: 16px;
-    margin-bottom: 15px;
-}
-
-.info-grid {
-    display: grid;
-
-    grid-template-columns: repeat(2, 1fr);
-
-    gap: 16px;
-}
-
-.info-item,
-.ai-item {
-    display: flex;
-    flex-direction: column;
-
-    gap: 5px;
-}
-
-.info-label {
-    color: #6b7280;
-
+.stat-label {
     font-size: 12px;
 
     font-weight: 600;
 
+    color: var(--muted);
+
     text-transform: uppercase;
+
+    letter-spacing: 0.03em;
 }
 
-.info-value {
-    color: #111827;
+.stat-value {
+    font-size: 24px;
+
+    font-weight: 700;
+
+    line-height: 1.2;
+}
+
+
+/* On small screens hide dashboard statistics
+   when ticket details are open. */
+
+body.show-detail .stats {
+    display: none;
+}
+
+
+/* =========================================================
+   MAIN LAYOUT
+========================================================= */
+
+.layout {
+    display: block;
+
+    padding:
+        14px
+        16px
+        24px;
+}
+
+.panel {
+    background: var(--surface);
+
+    border-radius: var(--radius);
+
+    box-shadow: var(--shadow);
+
+    padding: 16px;
+}
+
+
+/* Mobile:
+   only one panel is visible at a time. */
+
+#detailPanel {
+    display: none;
+}
+
+body.show-detail #listPanel {
+    display: none;
+}
+
+body.show-detail #detailPanel {
+    display: block;
+}
+
+
+/* =========================================================
+   PANEL HEADER
+========================================================= */
+
+.panel-head {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: baseline;
+
+    gap: 10px;
+
+    margin-bottom: 12px;
+}
+
+.panel-head h2 {
+    font-size: 17px;
+}
+
+
+/* =========================================================
+   SEARCH
+========================================================= */
+
+.search-row {
+    margin-bottom: 12px;
+}
+
+input[type="search"] {
+    width: 100%;
+
+    min-height: 44px;
+
+    padding: 0 14px;
+
+    border:
+        1px solid var(--border);
+
+    border-radius: 9px;
+
+    font: inherit;
+    font-size: 16px;
+
+    background: var(--surface-2);
+
+    color: var(--text);
+}
+
+input[type="search"]::placeholder {
+    color: #9ca3af;
+}
+
+input[type="search"]:focus,
+select:focus,
+textarea:focus {
+    outline: 2px solid var(--brand);
+
+    outline-offset: 1px;
+
+    border-color: var(--brand);
+}
+
+
+/* =========================================================
+   ALERT
+========================================================= */
+
+.alert {
+    padding: 10px 12px;
+
+    border-radius: 8px;
+
+    font-size: 13px;
+
+    margin-bottom: 12px;
+}
+
+.alert-error {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+
+/* =========================================================
+   TICKET LIST
+========================================================= */
+
+.ticket-list {
+    list-style: none;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 8px;
+}
+
+.ticket-list .empty {
+    text-align: center;
+
+    color: var(--muted);
+
+    padding: 28px 8px;
 
     font-size: 14px;
+}
 
-    line-height: 1.5;
+.ticket-item {
+    border:
+        1px solid var(--border);
+
+    border-radius: 10px;
+
+    padding: 12px;
+
+    cursor: pointer;
+
+    background: var(--surface);
+
+    transition:
+        background 0.12s ease,
+        border-color 0.12s ease,
+        transform 0.12s ease;
+}
+
+.ticket-item:hover {
+    background: var(--surface-2);
+
+    transform: translateY(-1px);
+}
+
+.ticket-item:focus-visible {
+    outline: 2px solid var(--brand);
+
+    outline-offset: 1px;
+}
+
+.ticket-item.selected {
+    background: var(--brand-soft);
+
+    border-color: var(--brand);
+}
+
+.ticket-item .row {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 8px;
+}
+
+.ticket-item .tid {
+    font-weight: 700;
+
+    font-size: 13px;
+
+    color: var(--brand);
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+}
+
+.ticket-item .subject {
+    font-size: 14px;
+
+    font-weight: 600;
+
+    margin: 4px 0 2px;
+
+    display: -webkit-box;
+
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+
+    -webkit-box-orient: vertical;
+
+    overflow: hidden;
 
     word-break: break-word;
 }
 
+.ticket-item .customer {
+    font-size: 12px;
 
-/* =========================================================
-   CUSTOMER MESSAGE
-========================================================= */
+    color: var(--muted);
 
-.customer-message {
-    background: #f9fafb;
+    overflow: hidden;
 
-    border: 1px solid #e5e7eb;
+    text-overflow: ellipsis;
 
-    border-radius: 7px;
-
-    padding: 15px;
-
-    line-height: 1.6;
-
-    white-space: pre-wrap;
-
-    font-size: 14px;
+    white-space: nowrap;
 }
 
-
-/* =========================================================
-   AI TRIAGE
-========================================================= */
-
-.ai-card {
-    background: #fafbff;
-
-    border-left: 4px solid #2563eb;
-}
-
-.ai-heading {
-    margin-bottom: 18px;
-}
-
-.ai-heading h3 {
-    margin-bottom: 4px;
-}
-
-.ai-heading p {
-    color: #6b7280;
-    font-size: 13px;
-}
-
-.ai-grid {
-    display: grid;
-
-    grid-template-columns: repeat(2, 1fr);
-
-    gap: 16px;
-}
-
-.key-details-section {
-    margin-top: 20px;
-}
-
-.key-details-section h4 {
-    font-size: 14px;
-    margin-bottom: 10px;
-}
-
-.key-details-section ul {
-    padding-left: 20px;
-}
-
-.key-details-section li {
-    margin-bottom: 7px;
-
-    font-size: 14px;
-
-    line-height: 1.5;
-}
-
-/* =========================================================
-   HUMAN REVIEW (CLIENT RESPONSE)
-========================================================= */
-
-.review-heading {
+.ticket-item .tags {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 12px;
-}
 
-.review-textarea {
-    width: 100%;
-    min-height: 180px;
-
-    padding: 12px;
-
-    border: 1px solid #d1d5db;
-    border-radius: 7px;
-
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 14px;
-    line-height: 1.6;
-
-    resize: vertical;
-}
-
-.review-controls {
-    display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 12px;
+
+    gap: 6px;
+
+    margin-top: 8px;
 }
 
-.secondary-button {
-    border: 1px solid #2563eb;
-    border-radius: 7px;
 
-    padding: 10px 16px;
+/* =========================================================
+   BADGES
+========================================================= */
 
-    font-size: 14px;
-    font-weight: 600;
+.badge {
+    display: inline-block;
 
-    background: white;
-    color: #2563eb;
+    padding:
+        3px
+        9px;
 
-    cursor: pointer;
+    border-radius: 999px;
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+    white-space: nowrap;
+
+    background: #e5e7eb;
+
+    color: #374151;
 }
 
-.secondary-button:hover {
-    background: #eff6ff;
+
+/* Ticket status */
+
+.status-received {
+    background: var(--info-bg);
+    color: var(--info);
 }
+
+.status-triaged {
+    background: var(--purple-bg);
+    color: var(--purple);
+}
+
+.status-in-progress {
+    background: var(--warning-bg);
+    color: var(--warning);
+}
+
+.status-resolved {
+    background: var(--success-bg);
+    color: var(--success);
+}
+
+
+/* Human review */
 
 .status-pending-review {
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--warning-bg);
+    color: var(--warning);
 }
 
 .status-approved {
@@ -464,49 +664,462 @@ th {
 }
 
 .status-edited {
-    background: #ede9fe;
-    color: #5b21b6;
+    background: var(--purple-bg);
+    color: var(--purple);
 }
 
 .status-sent {
-    background: #dcfce7;
-    color: #166534;
+    background: var(--success-bg);
+    color: var(--success);
 }
 
+
+/* Urgency */
+
+.urgency-high {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+.urgency-medium {
+    background: #ffedd5;
+    color: #9a3412;
+}
+
+.urgency-low {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+
 /* =========================================================
-   STATUS CONTROLS
+   DETAIL PANEL
 ========================================================= */
 
-.status-controls {
+.detail-top {
     display: flex;
 
+    justify-content: space-between;
     align-items: center;
 
     gap: 10px;
 
-    flex-wrap: wrap;
+    margin-bottom: 8px;
 }
 
-#statusSelect {
-    padding: 10px 12px;
+.detail-title {
+    font-size: 19px;
 
-    border: 1px solid #d1d5db;
+    line-height: 1.3;
 
-    border-radius: 7px;
+    margin-bottom: 14px;
 
-    background: white;
+    word-break: break-word;
+}
+
+
+/* =========================================================
+   CARDS
+========================================================= */
+
+.card {
+    border:
+        1px solid var(--border);
+
+    border-radius: 10px;
+
+    padding: 14px;
+
+    margin-bottom: 14px;
+
+    background: var(--surface);
+}
+
+.card h3 {
+    font-size: 15px;
+
+    margin-bottom: 10px;
+}
+
+.card h4 {
+    font-size: 13px;
+
+    margin:
+        14px
+        0
+        6px;
+}
+
+.card-head {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: flex-start;
+
+    gap: 10px;
+
+    margin-bottom: 10px;
+}
+
+.card-head h3 {
+    margin-bottom: 2px;
+}
+
+
+/* =========================================================
+   TICKET INFORMATION
+========================================================= */
+
+.info-grid {
+    display: grid;
+
+    grid-template-columns: 1fr;
+
+    gap: 12px;
+}
+
+dt {
+    font-size: 11px;
+
+    font-weight: 700;
+
+    color: var(--muted);
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.03em;
+
+    margin-bottom: 2px;
+}
+
+dd {
+    font-size: 14px;
+
+    word-break: break-word;
+
+    overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   CUSTOMER MESSAGE
+========================================================= */
+
+.message-box {
+    background: var(--surface-2);
+
+    border:
+        1px solid var(--border);
+
+    border-radius: 8px;
+
+    padding: 12px;
 
     font-size: 14px;
 
-    min-width: 180px;
+    white-space: pre-wrap;
+
+    word-break: break-word;
+
+    max-height: 320px;
+
+    overflow-y: auto;
 }
 
-.status-message {
-    margin-top: 10px;
+
+/* =========================================================
+   AI TRIAGE CARD
+========================================================= */
+
+.card-ai {
+    background: #fafbff;
+
+    border-left:
+        4px solid var(--brand);
+}
+
+.summary {
+    font-size: 14px;
+
+    margin-bottom: 12px;
+
+    color: var(--text-secondary);
+}
+
+
+/* AI classification chips */
+
+.chips {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 8px;
+}
+
+.chip {
+    display: inline-flex;
+
+    flex-direction: column;
+
+    background: #ffffff;
+
+    border:
+        1px solid var(--border);
+
+    border-radius: 8px;
+
+    padding:
+        6px
+        10px;
+
+    min-width: 0;
+
+    flex: 1 1 120px;
+}
+
+.chip em {
+    font-style: normal;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+    color: var(--muted);
+
+    text-transform: uppercase;
+}
+
+.chip b {
+    font-size: 13px;
+
+    font-weight: 600;
+
+    word-break: break-word;
+}
+
+
+/* Key details */
+
+.key-details {
+    padding-left: 20px;
+
+    font-size: 14px;
+}
+
+.key-details li {
+    margin-bottom: 4px;
+
+    word-break: break-word;
+
+    overflow-wrap: anywhere;
+}
+
+
+/* Triage metadata */
+
+.ai-meta {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    align-items: center;
+
+    gap: 5px;
+
+    margin-top: 14px;
+
+    padding-top: 10px;
+
+    border-top:
+        1px solid var(--border);
+}
+
+#aiTriageId {
+    color: var(--brand);
+
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Monaco,
+        Consolas,
+        monospace;
+
+    word-break: break-all;
+}
+
+
+/* =========================================================
+   HUMAN REVIEW
+========================================================= */
+
+.card-review {
+    background: #ffffff;
+
+    border-left:
+        4px solid #7c3aed;
+}
+
+.card-review textarea {
+    background: #fcfcff;
+}
+
+
+/* =========================================================
+   RESPONSE TEXTAREA
+========================================================= */
+
+textarea {
+    width: 100%;
+
+    min-height: 200px;
+
+    padding: 12px;
+
+    border:
+        1px solid var(--border);
+
+    border-radius: 9px;
+
+    font: inherit;
+
+    font-size: 16px;
+
+    line-height: 1.55;
+
+    resize: vertical;
+
+    background: #ffffff;
+
+    color: var(--text);
+}
+
+textarea::placeholder {
+    color: #9ca3af;
+}
+
+textarea:disabled {
+    background: var(--surface-2);
+
+    color: var(--muted);
+
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   REVIEW ACTIONS
+========================================================= */
+
+.actions {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 8px;
+
+    margin-top: 12px;
+}
+
+.actions .btn {
+    width: 100%;
+}
+
+
+/* =========================================================
+   INLINE MESSAGES
+========================================================= */
+
+.inline-msg {
+    margin-top: 8px;
 
     font-size: 13px;
 
-    color: #166534;
+    color: var(--success);
+
+    min-height: 1em;
+}
+
+.inline-msg.error {
+    color: var(--danger);
+}
+
+
+/* =========================================================
+   SENT INFORMATION
+========================================================= */
+
+.sent-information {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 5px;
+
+    align-items: center;
+
+    margin-top: 12px;
+
+    padding:
+        9px
+        11px;
+
+    background: var(--success-bg);
+
+    border:
+        1px solid #bbf7d0;
+
+    border-radius: 8px;
+
+    color: var(--success);
+}
+
+#sentAt {
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   STATUS SECTION
+========================================================= */
+
+.status-help {
+    margin-top: -5px;
+
+    margin-bottom: 10px;
+}
+
+.status-controls {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 8px;
+}
+
+select {
+    min-height: 44px;
+
+    padding:
+        0
+        12px;
+
+    border:
+        1px solid var(--border);
+
+    border-radius: 9px;
+
+    font: inherit;
+
+    font-size: 16px;
+
+    background: #ffffff;
+
+    color: var(--text);
+
+    width: 100%;
 }
 
 
@@ -517,112 +1130,355 @@ th {
 .no-selection {
     text-align: center;
 
-    padding: 45px 20px;
+    padding:
+        48px
+        16px;
+
+    color: var(--muted);
 }
 
-.no-selection-content h2 {
+.no-selection h2 {
+    color: var(--text);
+
     font-size: 18px;
 
-    margin-bottom: 8px;
+    margin:
+        6px
+        0;
 }
 
-.no-selection-content p {
-    color: #6b7280;
+.no-selection p {
+    max-width: 420px;
+
+    margin: 0 auto;
+
+    font-size: 14px;
+}
+
+.no-selection-icon {
+    font-size: 40px;
+}
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+.toast {
+    position: fixed;
+
+    left: 50%;
+
+    bottom:
+        calc(
+            18px +
+            var(--safe-bottom)
+        );
+
+    transform: translateX(-50%);
+
+    max-width:
+        calc(
+            100% - 32px
+        );
+
+    background: #111827;
+
+    color: #ffffff;
+
+    padding:
+        11px
+        16px;
+
+    border-radius: 10px;
 
     font-size: 14px;
 
-    max-width: 500px;
+    box-shadow:
+        0 6px 20px
+        rgba(0, 0, 0, 0.25);
 
-    margin: auto;
+    z-index: 50;
 
-    line-height: 1.5;
-}
-
-
-/* =========================================================
-   CONNECTION MESSAGE
-========================================================= */
-
-.message-box {
-    padding: 12px 14px;
-
-    border-radius: 7px;
-
-    background: #fef2f2;
-
-    color: #991b1b;
-
-    font-size: 13px;
-
-    margin-bottom: 15px;
-}
-
-
-/* =========================================================
-   UTILITY
-========================================================= */
-
-.hidden {
-    display: none !important;
-}
-
-
-/* =========================================================
-   FOOTER
-========================================================= */
-
-.footer {
     text-align: center;
+}
 
-    padding: 15px;
-
-    color: #6b7280;
-
-    font-size: 12px;
+.toast.error {
+    background: #b91c1c;
 }
 
 
 /* =========================================================
-   RESPONSIVE
+   TABLET
+   >= 640px
 ========================================================= */
 
-@media (max-width: 1000px) {
-
-    .stats-container {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .info-grid,
-    .ai-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-
-@media (max-width: 650px) {
+@media (min-width: 640px) {
 
     .top-header {
+        padding-left: 24px;
+        padding-right: 24px;
+    }
+
+    .brand h1 {
+        font-size: 20px;
+    }
+
+    .brand p {
+        font-size: 13px;
+    }
+
+
+    /* Statistics */
+
+    body.show-detail .stats {
+        display: grid;
+    }
+
+    .stats {
+        grid-template-columns:
+            repeat(5, 1fr);
+
+        padding:
+            18px
+            24px
+            0;
+
+        gap: 12px;
+    }
+
+    .stat-card:first-child {
+        grid-column: auto;
+    }
+
+    .stat-value {
+        font-size: 28px;
+    }
+
+
+    /* Layout */
+
+    .layout {
+        padding:
+            18px
+            24px
+            28px;
+    }
+
+
+    /* Ticket information */
+
+    .info-grid {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+
+    /* Review actions */
+
+    .actions {
+        flex-direction: row;
+
+        flex-wrap: wrap;
+    }
+
+    .actions .btn {
+        width: auto;
+    }
+
+
+    /* Status */
+
+    .status-controls {
+        flex-direction: row;
+
+        align-items: center;
+    }
+
+    select {
+        width: auto;
+
+        min-width: 200px;
+    }
+
+
+    /* AI chips */
+
+    .chip {
+        flex: 0 1 auto;
+    }
+}
+
+
+/* =========================================================
+   DESKTOP
+   >= 960px
+========================================================= */
+
+@media (min-width: 960px) {
+
+    .layout {
+        display: grid;
+
+        grid-template-columns:
+            minmax(300px, 380px)
+            1fr;
+
+        gap: 18px;
+
+        align-items: start;
+
+        max-width: 1500px;
+
+        margin: 0 auto;
+    }
+
+
+    /* Both panels visible */
+
+    #listPanel,
+    body.show-detail #listPanel {
+        display: block;
+    }
+
+    #detailPanel,
+    body.show-detail #detailPanel {
+        display: block;
+    }
+
+
+    /* Sticky ticket list */
+
+    .list-panel {
+        position: sticky;
+
+        top: 76px;
+
+        max-height:
+            calc(
+                100vh - 96px
+            );
+
+        display: flex !important;
+
         flex-direction: column;
-        align-items: flex-start;
     }
 
-    .stats-container {
-        grid-template-columns: 1fr;
-        padding: 20px;
+    .ticket-list {
+        overflow-y: auto;
+
+        padding-right: 2px;
     }
 
-    .dashboard-container {
-        padding: 5px 20px 25px;
+
+    /* Back button is unnecessary on desktop */
+
+    .back-btn {
+        display: none;
     }
 
-    .panel {
-        padding: 16px;
+
+    .btn {
+        min-height: 40px;
     }
 
-    th,
-    td {
-        padding: 9px;
 
-        font-size: 12px;
+    .detail-panel {
+        padding: 22px;
+    }
+
+
+    /* Better desktop card spacing */
+
+    .card {
+        padding: 18px;
+    }
+
+
+    .detail-title {
+        font-size: 22px;
+    }
+}
+
+
+/* =========================================================
+   LARGE DESKTOP
+   >= 1200px
+========================================================= */
+
+@media (min-width: 1200px) {
+
+    .stats {
+        max-width: 1500px;
+
+        margin:
+            0
+            auto;
+    }
+
+    .detail-panel {
+        padding: 24px;
+    }
+}
+
+
+/* =========================================================
+   ACCESSIBILITY
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+
+        transition: none !important;
+    }
+}
+
+
+/* =========================================================
+   PRINT
+========================================================= */
+
+@media print {
+
+    .top-header,
+    .stats,
+    #listPanel,
+    .actions,
+    .status-controls,
+    .back-btn,
+    .toast {
+        display: none !important;
+    }
+
+    .layout {
+        display: block;
+
+        padding: 0;
+    }
+
+    #detailPanel {
+        display: block !important;
+
+        box-shadow: none;
+
+        padding: 0;
+    }
+
+    .card {
+        break-inside: avoid;
+
+        box-shadow: none;
+    }
+
+    body {
+        background: #ffffff;
     }
 }
