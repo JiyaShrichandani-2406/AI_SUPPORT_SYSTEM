@@ -86,299 +86,150 @@ def home():
 # RECEIVE SUPPORT TICKET
 # ==========================================================
 
+
 @app.post("/tickets")
 def receive_ticket(
     ticket: Ticket,
     db: Session = Depends(get_db)
 ):
-
     print("\n==========================================")
     print("TICKET RECEIVED")
     print("==========================================")
-
     print("Ticket ID:", ticket.ticket_id)
     print("Sender:", ticket.sender)
     print("Subject:", ticket.subject)
-    print("Message:", ticket.message)
-    print("Received At:", ticket.received_at)
-    print(
-        "Gmail Message ID:",
-        ticket.gmail_message_id
-    )
-    print("Status:", ticket.status)
 
-
-    # ======================================================
-    # STEP 1 — DUPLICATE CHECK
-    # ======================================================
-    #
-    # IMPORTANT:
-    # Check duplicate BEFORE AI/RAG processing.
-    # This prevents the same Gmail message from being
-    # analyzed multiple times.
-    # ======================================================
-
+    # STEP 1: Check for duplicate Gmail messages
     existing_ticket = db.query(
         SupportTicket
     ).filter(
-        SupportTicket.gmail_message_id
-        == ticket.gmail_message_id
+        SupportTicket.gmail_message_id == ticket.gmail_message_id
     ).first()
 
-
     if existing_ticket:
-
-        print("\n==========================================")
-        print("DUPLICATE TICKET")
-        print("==========================================")
-
-        print(
-            "This Gmail message has already "
-            "been processed."
-        )
-
-        print(
-            "Existing Ticket ID:",
-            existing_ticket.ticket_id
-        )
-
         return {
             "status": "duplicate",
-
-            "message":
-            "This ticket has already been processed.",
-
-            "ticket_id":
-            existing_ticket.ticket_id
+            "message": "This ticket has already been processed.",
+            "ticket_id": existing_ticket.ticket_id
         }
 
-
-    # ======================================================
-    # STEP 2 — AI TRIAGE
-    # ======================================================
-
-    print("\n==========================================")
-    print("AI TRIAGE")
-    print("==========================================")
-
-    print("Sending ticket to AI...\n")
-
-
+    # STEP 2: AI triage
     try:
+        print("\nStarting AI triage...")
 
         ai_result = analyze_ticket(
             ticket.subject or "",
-            ticket.message
+            ticket.message or ""
         )
 
-    except Exception as error:
+        if not ai_result:
+            raise ValueError("AI triage returned no result")
 
-        print("\nAI TRIAGE ERROR:")
-        print(error)
+    except Exception as error:
+        print("AI TRIAGE ERROR:", error)
 
         return {
             "status": "error",
-
-            "message":
-            "AI could not analyze the ticket.",
-
+            "message": "AI could not analyze the ticket.",
             "error": str(error)
         }
 
-
-    if ai_result is None:
-
-        return {
-            "status": "error",
-
-            "message":
-            "AI could not analyze the ticket."
-        }
-
-
-    print("\n==========================================")
-    print("AI TRIAGE RESULT")
-    print("==========================================")
-
-
-    print(
-        json.dumps(
-            ai_result,
-            indent=4
-        )
-    )
-
-
-    # ======================================================
-    # STEP 3 — BUILD COMPLETE TICKET FOR RAG
-    # ======================================================
-
+    # STEP 3: RAG generation
     rag_ticket_text = f"""
 Subject: {ticket.subject or ""}
 
 Customer Message:
-{ticket.message}
+{ticket.message or ""}
 """
 
-
-    print("\n==========================================")
-    print("RAG GENERATION")
-    print("==========================================")
-
-    print(
-        "Sending customer ticket to RAG..."
-    )
-
-
-    # ======================================================
-    # STEP 4 — RAG + OLLAMA
-    # ======================================================
-
-    rag_result = {
-        "response": None,
-        "sources": []
-    }
-
+    ai_response = None
+    rag_sources = []
 
     try:
+        print("\nStarting RAG generation...")
 
         rag_result = generate_rag_response(
             ticket_text=rag_ticket_text,
             top_k=2
         )
 
+        if isinstance(rag_result, dict):
+            ai_response = rag_result.get("response")
+            rag_sources = rag_result.get("sources", [])
+
+        elif isinstance(rag_result, str):
+            ai_response = rag_result
+
     except Exception as error:
+        print("RAG ERROR:", error)
 
-        print("\nRAG ERROR:")
-        print(error)
-
-        rag_result = {
-            "response": None,
-            "sources": []
-        }
-
-
-    # ======================================================
-    # STEP 5 — EXTRACT RAG RESPONSE
-    # ======================================================
-
-    ai_response = None
-    rag_sources = []
-
-
-    if isinstance(
-        rag_result,
-        dict
-    ):
-
-        ai_response = rag_result.get(
-            "response"
-        )
-
-        rag_sources = rag_result.get(
-            "sources",
-            []
-        )
-
-
-    elif isinstance(
-        rag_result,
-        str
-    ):
-
-        ai_response = rag_result
-
-
-    # ======================================================
-    # DISPLAY CLIENT RESPONSE
-    # ======================================================
-
-    print("\n==========================================")
-    print("CLIENT-READY AI RESPONSE")
-    print("==========================================")
-
-
-    if ai_response:
-
-        print(ai_response)
-
-    else:
-
-        print(
-            "The AI response could not be generated "
-            "within the allowed time."
-        )
-
-
-    # ======================================================
-    # STEP 6 — SAVE INCOMING TICKET
-    # ======================================================
-
+    # STEP 4: Create database ticket
     new_ticket = SupportTicket(
-
         ticket_id=ticket.ticket_id,
-
         sender=ticket.sender,
-
         subject=ticket.subject,
-
         message=ticket.message,
-
         received_at=ticket.received_at,
-
         gmail_message_id=ticket.gmail_message_id,
-
         status="TRIAGED"
     )
 
-
-    db.add(new_ticket)
-
-
-    # ======================================================
-    # STEP 7 — SAVE AI TRIAGE + RAG RESPONSE
-    # ======================================================
-
+    # STEP 5: Save AI analysis
     new_triage = AITriageResult(
-
-        triage_id=
-        "TRI-" +
-        uuid.uuid4().hex[:8].upper(),
-
+        triage_id="TRI-" + uuid.uuid4().hex[:8].upper(),
         ticket_id=ticket.ticket_id,
-
-        summary=
-        ai_result.get("summary"),
-
-        category=
-        ai_result.get("category"),
-
-        intent=
-        ai_result.get("intent"),
-
-        urgency=
-        ai_result.get("urgency"),
-
-        sentiment=
-        ai_result.get("sentiment"),
-
-        key_details=
-        json.dumps(
-            ai_result.get(
-                "key_details",
-                []
-            )
+        summary=ai_result.get("summary"),
+        category=ai_result.get("category"),
+        intent=ai_result.get("intent"),
+        urgency=ai_result.get("urgency"),
+        sentiment=ai_result.get("sentiment"),
+        key_details=json.dumps(
+            ai_result.get("key_details", [])
         ),
-
         ai_response=ai_response
     )
 
-
+    db.add(new_ticket)
     db.add(new_triage)
 
-# ==========================================================
-# APPROVE AND SEND RESPONSE TO CUSTOMER
-# ==========================================================
+    # STEP 6: Commit database changes
+    try:
+        db.commit()
+        db.refresh(new_ticket)
+
+        print("\nTicket and AI analysis saved successfully.")
+
+    except Exception as error:
+        db.rollback()
+
+        print("DATABASE ERROR:", error)
+
+        return {
+            "status": "error",
+            "message": "Could not save ticket to database.",
+            "error": str(error)
+        }
+
+    # STEP 7: Return API response
+    if ai_response:
+        return {
+            "status": "success",
+            "message": "Ticket analyzed and saved successfully. Awaiting human review.",
+            "ticket_id": ticket.ticket_id,
+            "ai_analysis": ai_result,
+            "client_response": ai_response,
+            "rag_sources": rag_sources
+        }
+
+    return {
+        "status": "partial",
+        "message": "Ticket and AI triage saved, but AI response generation failed.",
+        "ticket_id": ticket.ticket_id,
+        "ai_analysis": ai_result,
+        "client_response": "",
+        "rag_sources": rag_sources
+    }
+
 
 @app.post("/tickets/{ticket_id}/approve")
 def approve_ticket(
